@@ -3,26 +3,35 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert } from
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
+import { useTranslation } from '../../lib/i18n';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
 
 const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
 
+const ROLE_STYLE: Record<string, { backgroundColor: string; color: string }> = {
+  admin:       { backgroundColor: '#FEF3C7', color: '#92400E' },
+  pastor:      { backgroundColor: '#DCFCE7', color: '#166534' },
+  cell_leader: { backgroundColor: '#DBEAFE', color: '#1E40AF' },
+  member:      { backgroundColor: '#F3F4F6', color: '#6B7280' },
+};
+
 export default function MembersScreen() {
   const [members, setMembers] = useState<Member[]>([]);
   const [cells, setCells] = useState<Cell[]>([]);
   const [editing, setEditing] = useState<Member | null>(null);
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     const [{ data: memberData }, { data: cellData }] = await Promise.all([
-      supabase.from('users').select('id, name, roles, cell_id, cells(name)').order('name'),
+      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)').order('name'),
       supabase.from('cells').select('id, name').order('name'),
     ]);
-    setMembers(memberData ?? []);
+    setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
   }
 
@@ -49,7 +58,7 @@ export default function MembersScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="멤버 / Members" />
+      <Header title={t('members')} />
       <FlatList
         data={members}
         keyExtractor={item => item.id}
@@ -57,19 +66,23 @@ export default function MembersScreen() {
           <TouchableOpacity style={styles.row} onPress={() => setEditing({ ...item })}>
             <View>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.meta}>{item.roles.join(', ')} · {item.cells?.name ?? '셀 없음 / No cell'}</Text>
+              <View style={styles.metaRow}>
+                {item.roles.map(r => (
+                  <Text key={r} style={[styles.roleBadge, ROLE_STYLE[r]]}>{r}</Text>
+                ))}
+                <Text style={styles.metaCell}> · {item.cells?.name ?? t('noCell')}</Text>
+              </View>
             </View>
-            <Text style={styles.edit}>편집 / Edit</Text>
+            <Text style={styles.editLabel}>{t('edit')}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>멤버가 없습니다 / No members yet</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
       />
 
-      {/* Edit modal */}
       <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>{editing?.name}</Text>
-          <Text style={styles.label}>역할 / Roles</Text>
+          <Text style={styles.label}>{t('roles')}</Text>
           {ALL_ROLES.map(role => {
             const active = editing?.roles.includes(role) ?? false;
             return (
@@ -79,16 +92,16 @@ export default function MembersScreen() {
               </TouchableOpacity>
             );
           })}
-          <Text style={styles.label}>셀 / Cell</Text>
+          <Text style={styles.label}>{t('cell')}</Text>
           <Picker selectedValue={editing?.cell_id ?? ''} onValueChange={v => setEditing(e => e ? { ...e, cell_id: v || null } : e)}>
-            <Picker.Item label="셀 없음 / No cell" value="" />
+            <Picker.Item label={t('noCell')} value="" />
             {cells.map(c => <Picker.Item key={c.id} label={c.name} value={c.id} />)}
           </Picker>
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveEdit} disabled={saving}>
-            <Text style={styles.saveBtnText}>{saving ? '...' : '저장 / Save'}</Text>
+            <Text style={styles.saveBtnText}>{saving ? '...' : t('save')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(null)}>
-            <Text style={styles.cancelText}>취소 / Cancel</Text>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -100,8 +113,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
   name: { fontSize: 16, fontWeight: '500' },
-  meta: { fontSize: 13, color: '#888', marginTop: 2 },
-  edit: { fontSize: 13, color: '#4F46E5' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 4 },
+  metaCell: { fontSize: 12, color: '#999' },
+  roleBadge: { fontSize: 10, fontWeight: '600', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20, overflow: 'hidden' },
+  editLabel: { fontSize: 13, color: '#4F46E5' },
   empty: { textAlign: 'center', marginTop: 60, color: '#aaa', fontSize: 15 },
   modal: { flex: 1, padding: 24, paddingTop: 48 },
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },

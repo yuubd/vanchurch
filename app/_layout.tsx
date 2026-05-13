@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { LanguageProvider } from '../lib/i18n';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -58,5 +59,5 @@ export default function RootLayout() {
     }
   }
 
-  return <Slot />;
+  return <LanguageProvider><Slot /></LanguageProvider>;
 }

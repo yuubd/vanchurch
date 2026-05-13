@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, A
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
+import { useTranslation } from '../../lib/i18n';
 
 type Leader = { id: string; name: string };
 type Cell = { id: string; name: string; leader_id: string | null; users: { name: string } | null };
@@ -14,15 +15,16 @@ export default function CellsScreen() {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     const [{ data: cellData }, { data: leaderData }] = await Promise.all([
-      supabase.from('cells').select('id, name, leader_id, users(name)').order('name'),
-      supabase.from('users').select('id, name').in('role', ['cell_leader', 'admin', 'pastor']).order('name'),
+      supabase.from('cells').select('id, name, leader_id, users!cells_leader_id_fkey(name)').order('name'),
+      supabase.from('users').select('id, name').overlaps('roles', ['cell_leader', 'admin', 'pastor']).order('name'),
     ]);
-    setCells(cellData ?? []);
+    setCells((cellData ?? []) as any);
     setLeaders(leaderData ?? []);
   }
 
@@ -55,9 +57,9 @@ export default function CellsScreen() {
   }
 
   async function deleteCell(id: string) {
-    Alert.alert('셀 삭제 / Delete cell', '정말 삭제하시겠습니까? / Are you sure?', [
-      { text: '취소 / Cancel', style: 'cancel' },
-      { text: '삭제 / Delete', style: 'destructive', onPress: async () => {
+    Alert.alert(t('deleteCell'), t('deleteConfirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: async () => {
         await supabase.from('cells').delete().eq('id', id);
         loadData();
       }},
@@ -66,9 +68,9 @@ export default function CellsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="셀 / Cells" />
+      <Header title={t('cells')} />
       <TouchableOpacity style={styles.addBtn} onPress={() => setAdding(true)}>
-        <Text style={styles.addBtnText}>+ 셀 추가 / Add cell</Text>
+        <Text style={styles.addBtnText}>{t('addCell')}</Text>
       </TouchableOpacity>
       <FlatList
         data={cells}
@@ -77,47 +79,45 @@ export default function CellsScreen() {
           <View style={styles.row}>
             <TouchableOpacity style={styles.rowContent} onPress={() => setEditing({ ...item })}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.meta}>리더: {item.users?.name ?? '없음 / None'}</Text>
+              <Text style={styles.meta}>{t('cellLeader')}: {item.users?.name ?? t('none')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => deleteCell(item.id)}>
-              <Text style={styles.delete}>삭제</Text>
+              <Text style={styles.delete}>{t('delete')}</Text>
             </TouchableOpacity>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>셀이 없습니다 / No cells yet</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('noCells')}</Text>}
       />
 
-      {/* Edit modal */}
       <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modal}>
-          <Text style={styles.modalTitle}>셀 편집 / Edit cell</Text>
-          <Text style={styles.label}>셀 이름 / Cell name</Text>
+          <Text style={styles.modalTitle}>{t('editCell')}</Text>
+          <Text style={styles.label}>{t('cellName')}</Text>
           <TextInput style={styles.input} value={editing?.name ?? ''} onChangeText={v => setEditing(e => e ? { ...e, name: v } : e)} />
-          <Text style={styles.label}>셀 리더 / Cell leader</Text>
+          <Text style={styles.label}>{t('cellLeader')}</Text>
           <Picker selectedValue={editing?.leader_id ?? ''} onValueChange={v => setEditing(e => e ? { ...e, leader_id: v || null } : e)}>
-            <Picker.Item label="없음 / None" value="" />
+            <Picker.Item label={t('none')} value="" />
             {leaders.map(l => <Picker.Item key={l.id} label={l.name} value={l.id} />)}
           </Picker>
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveEdit} disabled={saving}>
-            <Text style={styles.saveBtnText}>{saving ? '...' : '저장 / Save'}</Text>
+            <Text style={styles.saveBtnText}>{saving ? '...' : t('save')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(null)}>
-            <Text style={styles.cancelText}>취소 / Cancel</Text>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
 
-      {/* Add modal */}
       <Modal visible={adding} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modal}>
-          <Text style={styles.modalTitle}>셀 추가 / Add cell</Text>
-          <Text style={styles.label}>셀 이름 / Cell name</Text>
-          <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="1셀, 청년부 1셀..." autoFocus />
+          <Text style={styles.modalTitle}>{t('addCell')}</Text>
+          <Text style={styles.label}>{t('cellName')}</Text>
+          <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder={t('cellNamePlaceholder')} autoFocus />
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={addCell} disabled={saving}>
-            <Text style={styles.saveBtnText}>{saving ? '...' : '추가 / Add'}</Text>
+            <Text style={styles.saveBtnText}>{saving ? '...' : t('add')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setAdding(false)}>
-            <Text style={styles.cancelText}>취소 / Cancel</Text>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
