@@ -50,8 +50,10 @@ export default function AdminHome() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
-        <View style={styles.bellBtn}><Text style={styles.bellIcon}>🔔</Text></View>
-        <View style={styles.avatarBtn}><Text style={styles.avatarText}>{adminName.slice(0, 1)}</Text></View>
+        <View />
+        <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push('/(admin)/profile')}>
+          <Text style={styles.avatarText}>{adminName.slice(0, 1)}</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.greeting}>안녕하세요, {adminName}님 👋</Text>
@@ -91,8 +93,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 24, paddingTop: 56 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 },
-  bellBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  bellIcon: { fontSize: 20 },
   avatarBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 17, fontWeight: '700', color: '#1D4ED8' },
   greeting: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
