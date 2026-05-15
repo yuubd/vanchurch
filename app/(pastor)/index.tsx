@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   card: { padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   name: { fontWeight: '600', fontSize: 15 },
-  cell: { fontSize: 12, color: '#4F46E5', backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  cell: { fontSize: 12, color: '#2563EB', backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
   body: { fontSize: 15, color: '#333', lineHeight: 22 },
   date: { fontSize: 12, color: '#aaa', marginTop: 6 },
   empty: { textAlign: 'center', marginTop: 60, color: '#aaa', fontSize: 15 },

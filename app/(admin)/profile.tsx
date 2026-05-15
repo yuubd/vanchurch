@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   langToggle: { flexDirection: 'row', gap: 8 },
   langBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd' },
-  langBtnActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+  langBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   langBtnText: { fontSize: 14, color: '#666', fontWeight: '500' },
   langBtnTextActive: { color: '#fff', fontWeight: '600' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },

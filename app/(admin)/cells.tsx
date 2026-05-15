@@ -127,7 +127,7 @@ export default function CellsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  addBtn: { margin: 16, backgroundColor: '#4F46E5', borderRadius: 10, padding: 14, alignItems: 'center' },
+  addBtn: { margin: 16, backgroundColor: '#2563EB', borderRadius: 10, padding: 14, alignItems: 'center' },
   addBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
   rowContent: { flex: 1 },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },
   label: { fontSize: 14, color: '#666', marginTop: 16, marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 16 },
-  saveBtn: { backgroundColor: '#4F46E5', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
+  saveBtn: { backgroundColor: '#2563EB', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelBtn: { alignItems: 'center', marginTop: 16 },
   cancelText: { color: '#888', fontSize: 15 },

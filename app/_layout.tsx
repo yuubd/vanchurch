@@ -36,20 +36,28 @@ export default function RootLayout() {
   async function redirectByRole() {
     const { data } = await supabase
       .from('users')
-      .select('roles, church_id')
+      .select('roles, church_id, name')
       .eq('id', session?.user.id)
       .single();
 
+    // No profile row yet (edge case — trigger should have created it)
     if (!data) return;
 
-    const roles: string[] = data.roles ?? ['member'];
+    // Incomplete onboarding: needs name
+    if (!data.name) {
+      router.replace('/(auth)/profile-setup');
+      return;
+    }
 
+    // Incomplete onboarding: needs church
+    if (!data.church_id) {
+      router.replace('/(auth)/find-community');
+      return;
+    }
+
+    const roles: string[] = data.roles ?? ['member'];
     if (roles.includes('admin')) {
-      if (!data.church_id) {
-        router.replace('/(admin)/setup');
-      } else {
-        router.replace('/(admin)');
-      }
+      router.replace('/(admin)');
     } else if (roles.includes('pastor')) {
       router.replace('/(pastor)');
     } else if (roles.includes('cell_leader')) {

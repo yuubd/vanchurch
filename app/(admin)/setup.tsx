@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 40, lineHeight: 24 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 16, fontSize: 20, marginBottom: 16 },
-  button: { backgroundColor: '#4F46E5', borderRadius: 12, padding: 18, alignItems: 'center' },
+  button: { backgroundColor: '#2563EB', borderRadius: 12, padding: 18, alignItems: 'center' },
   disabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
 });
