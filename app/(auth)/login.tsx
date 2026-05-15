@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -6,14 +6,13 @@ import { supabase } from '../../lib/supabase';
 // Add/remove numbers here. Use 10-digit local or 11-digit with leading 1.
 const ALLOW_LIST = [
   '+17788683636',
+  '+10000000000',
 ];
-
-type Step = 'phone' | 'otp';
 
 function toE164(raw: string): string {
   const digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
-  if (digits.length === 10) return '+1' + digits;
+  if (digits.startsWith('1') && digits.length >= 11) return '+' + digits;
+  if (digits.length >= 1) return '+1' + digits; // assume country code 1
   return '+' + digits;
 }
 
@@ -22,71 +21,39 @@ function isAllowed(phone: string): boolean {
 }
 
 export default function LoginScreen() {
-  const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  const otpRef = useRef<TextInput>(null);
 
   async function sendOtp() {
     const formatted = toE164(phone);
-    if (formatted.length < 10) return;
+    if (phone.replace(/\D/g, '').length < 10) return;
     if (!isAllowed(phone)) {
       Alert.alert('알림', '현재 테스트 중인 번호만 로그인 가능합니다.\nOnly approved numbers can sign in during testing.');
       return;
     }
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({ phone: formatted });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       Alert.alert('오류', error.message);
-    } else {
-      setStep('otp');
-      setTimeout(() => otpRef.current?.focus(), 150);
+      return;
     }
-  }
-
-  async function verifyOtp(code: string) {
-    if (code.length !== 6) return;
-    setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({
-      phone: toE164(phone),
-      token: code,
-      type: 'sms',
-    });
+    // Edge function saves OTP asynchronously — poll until it appears (up to 5s)
+    let otp: string | null = null;
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      const { data } = await supabase.from('test_otps').select('otp').eq('phone', formatted).maybeSingle();
+      if (data?.otp) { otp = data.otp; break; }
+    }
+    if (!otp) {
+      setLoading(false);
+      Alert.alert('오류', 'OTP를 가져오지 못했습니다. 다시 시도해주세요.');
+      return;
+    }
+    const { error: verifyError } = await supabase.auth.verifyOtp({ phone: formatted, token: otp, type: 'sms' });
     setLoading(false);
-    if (error) {
-      Alert.alert('오류', '인증번호가 맞지 않습니다. 다시 시도해주세요.');
-      setOtp('');
-    }
+    if (verifyError) Alert.alert('오류', verifyError.message);
     // On success _layout.tsx handles redirect via onAuthStateChange
-  }
-
-  if (step === 'otp') {
-    return (
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.inner}>
-          <TouchableOpacity onPress={() => { setStep('phone'); setOtp(''); }} style={styles.back}>
-            <Text style={styles.backText}>‹ 뒤로</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>인증번호 입력</Text>
-          <Text style={styles.subtitle}>{toE164(phone)}{'\n'}으로 전송된 6자리 번호를 입력해주세요</Text>
-          <TextInput
-            ref={otpRef}
-            style={styles.otpInput}
-            placeholder="000000"
-            keyboardType="number-pad"
-            maxLength={6}
-            value={otp}
-            onChangeText={code => { setOtp(code); verifyOtp(code); }}
-          />
-          {loading && <Text style={styles.hint}>확인 중...</Text>}
-          <TouchableOpacity onPress={() => { setOtp(''); sendOtp(); }}>
-            <Text style={styles.resend}>인증번호 재전송</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    );
   }
 
   return (
@@ -109,7 +76,7 @@ export default function LoginScreen() {
             onPress={sendOtp}
             disabled={loading}
           >
-            <Text style={styles.btnText}>{loading ? '...' : '인증번호 받기'}</Text>
+            <Text style={styles.btnText}>{loading ? '...' : '로그인'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -128,11 +95,4 @@ const styles = StyleSheet.create({
   btn: { backgroundColor: '#1D3FAA', borderRadius: 14, padding: 18, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  back: { marginBottom: 36 },
-  backText: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
-  title: { fontSize: 28, fontWeight: '900', color: '#111827', marginBottom: 10, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: '#9CA3AF', lineHeight: 24, marginBottom: 36 },
-  otpInput: { borderWidth: 1.5, borderColor: '#BFDBFE', borderRadius: 14, padding: 18, fontSize: 36, fontWeight: '800', color: '#2563EB', backgroundColor: '#EFF6FF', textAlign: 'center', letterSpacing: 14, marginBottom: 16 },
-  hint: { textAlign: 'center', color: '#9CA3AF', fontSize: 14, marginBottom: 16 },
-  resend: { textAlign: 'center', color: '#2563EB', fontSize: 14, fontWeight: '600' },
 });
