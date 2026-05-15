@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
-import Header from '../../components/Header';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null };
 
@@ -37,10 +36,10 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Header title={t('myProfile')} />
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.pageTitle}>{t('myProfile')}</Text>
       {profile && (
-        <View style={styles.inner}>
+        <View>
           <View style={styles.section}>
             <Text style={styles.label}>{t('name')}</Text>
             <Text style={styles.value}>{profile.name}</Text>
@@ -83,13 +82,14 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
         <Text style={styles.logoutText}>{t('logout')}</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  inner: { flex: 1, padding: 20 },
+  content: { padding: 24, paddingTop: 60 },
+  pageTitle: { fontSize: 26, fontWeight: '800', color: '#111827', letterSpacing: -0.5, marginBottom: 28 },
   section: { paddingVertical: 16, borderBottomWidth: 1, borderColor: '#f0f0f0' },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },

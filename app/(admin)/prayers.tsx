@@ -29,7 +29,7 @@ export default function PrayersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity onPress={() => router.navigate('/(admin)')} style={styles.back}>
           <Text style={styles.backText}>‹ 뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.title}>기도제목</Text>
