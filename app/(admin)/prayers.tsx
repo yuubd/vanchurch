@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 type PrayerRequest = { id: string; body: string; created_at: string; users: { name: string; cells: { name: string } | null } | null };
 
 export default function PrayersScreen() {
-  const router = useRouter();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
 
   useEffect(() => {
@@ -29,9 +27,6 @@ export default function PrayersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.navigate('/(admin)')} style={styles.back}>
-          <Text style={styles.backText}>‹ 뒤로</Text>
-        </TouchableOpacity>
         <Text style={styles.title}>기도제목</Text>
       </View>
       <FlatList
@@ -57,8 +52,6 @@ export default function PrayersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderColor: '#F3F4F6' },
-  back: { marginBottom: 8 },
-  backText: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
   title: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
   list: { padding: 16 },
   card: { padding: 16, borderRadius: 14, backgroundColor: '#F9FAFB', marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
