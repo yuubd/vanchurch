@@ -59,7 +59,7 @@ export default function RootLayout() {
     if (roles.includes('admin')) {
       router.replace('/(admin)');
     } else if (roles.includes('pastor')) {
-      router.replace('/(pastor)');
+      router.replace('/(admin)'); // pastor has same access as admin
     } else if (roles.includes('cell_leader')) {
       router.replace('/(leader)');
     } else {
