@@ -41,8 +41,8 @@ export default function MemberLayout() {
           borderTopWidth: 0.5,
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',
-          height: 60,
-          paddingBottom: 8,
+        },
+        tabBarItemStyle: {
           paddingTop: 8,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
