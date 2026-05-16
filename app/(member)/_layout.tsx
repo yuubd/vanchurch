@@ -1,0 +1,55 @@
+import { useEffect, useState } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
+  return <Ionicons name={focused ? name : `${name}-outline` as IoniconsName} size={24} color={focused ? '#2563EB' : '#9CA3AF'} />;
+}
+
+export default function MemberLayout() {
+  const router = useRouter();
+  const [allowed, setAllowed] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.replace('/(auth)/login'); return; }
+      supabase.from('users').select('roles').eq('id', user.id).single().then(({ data }) => {
+        const roles: string[] = data?.roles ?? ['member'];
+        if (roles.includes('admin') || roles.includes('pastor')) {
+          router.replace('/(admin)');
+        } else if (roles.includes('cell_leader')) {
+          router.replace('/(leader)');
+        } else {
+          setAllowed(true);
+        }
+      });
+    });
+  }, []);
+
+  if (!allowed) return null;
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarStyle: {
+          borderTopWidth: 0.5,
+          borderTopColor: '#E5E7EB',
+          backgroundColor: '#fff',
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      }}
+    >
+      <Tabs.Screen name="index"   options={{ title: '기도제목', tabBarIcon: ({ focused }) => <TabIcon name="heart"  focused={focused} /> }} />
+      <Tabs.Screen name="profile" options={{ title: '프로필',  tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }} />
+    </Tabs>
+  );
+}
