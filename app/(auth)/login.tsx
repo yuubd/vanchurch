@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 const ALLOW_LIST = [
   '+17788683636',
   '+10000000000',
+  '+11111111111',
 ];
 
 function toE164(raw: string): string {
