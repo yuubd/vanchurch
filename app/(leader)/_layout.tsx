@@ -1,5 +1,7 @@
-import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -8,6 +10,27 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
 }
 
 export default function LeaderLayout() {
+  const router = useRouter();
+  const [allowed, setAllowed] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.replace('/(auth)/login'); return; }
+      supabase.from('users').select('roles').eq('id', user.id).single().then(({ data }) => {
+        const roles: string[] = data?.roles ?? [];
+        if (roles.includes('cell_leader')) {
+          setAllowed(true);
+        } else if (roles.includes('admin') || roles.includes('pastor')) {
+          router.replace('/(admin)');
+        } else {
+          router.replace('/(member)');
+        }
+      });
+    });
+  }, []);
+
+  if (!allowed) return null;
+
   return (
     <Tabs
       screenOptions={{
