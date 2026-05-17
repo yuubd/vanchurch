@@ -22,9 +22,11 @@ function isAllowed(phone: string): boolean {
   return ALLOW_LIST.includes(toE164(phone));
 }
 
-function formatPhone(digits: string): string {
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+function formatPhone(digits: string, deleting: boolean): string {
+  if (digits.length < 3) return digits;
+  if (digits.length === 3) return deleting ? digits : `${digits}-`;
+  if (digits.length < 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  if (digits.length === 6) return deleting ? `${digits.slice(0, 3)}-${digits.slice(3)}` : `${digits.slice(0, 3)}-${digits.slice(3)}-`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
 
@@ -34,7 +36,8 @@ export default function LoginScreen() {
 
   function handlePhoneChange(text: string) {
     const digits = text.replace(/\D/g, '').slice(0, 10);
-    setPhone(formatPhone(digits));
+    const deleting = text.length < phone.length;
+    setPhone(formatPhone(digits, deleting));
   }
 
   async function sendOtp() {
