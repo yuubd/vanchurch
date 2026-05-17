@@ -22,9 +22,20 @@ function isAllowed(phone: string): boolean {
   return ALLOW_LIST.includes(toE164(phone));
 }
 
+function formatPhone(digits: string): string {
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function handlePhoneChange(text: string) {
+    const digits = text.replace(/\D/g, '').slice(0, 10);
+    setPhone(formatPhone(digits));
+  }
 
   async function sendOtp() {
     const formatted = toE164(phone);
@@ -70,7 +81,7 @@ export default function LoginScreen() {
             placeholder="(604) 000-0000"
             keyboardType="phone-pad"
             value={phone}
-            onChangeText={setPhone}
+            onChangeText={handlePhoneChange}
             autoFocus
           />
           <TouchableOpacity
