@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 
 type PrayerRequest = {
@@ -12,6 +13,10 @@ type PrayerRequest = {
 export default function LeaderPrayers() {
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [cellName, setCellName] = useState('');
+  const [cellId, setCellId] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -26,6 +31,7 @@ export default function LeaderPrayers() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: me } = await supabase.from('users').select('cell_id').eq('id', user!.id).single();
     if (!me?.cell_id) return;
+    setCellId(me.cell_id);
 
     const [{ data: cell }, { data: prayers }] = await Promise.all([
       supabase.from('cells').select('name').eq('id', me.cell_id).single(),
@@ -37,6 +43,18 @@ export default function LeaderPrayers() {
 
     setCellName(cell?.name ?? '');
     setRequests((prayers ?? []) as any);
+  }
+
+  async function submit() {
+    if (!draft.trim()) return;
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('prayer_requests').insert({ user_id: user?.id, body: draft.trim() });
+    setLoading(false);
+    if (error) { Alert.alert('오류', error.message); return; }
+    setDraft('');
+    setModalVisible(false);
+    loadData();
   }
 
   return (
@@ -60,6 +78,39 @@ export default function LeaderPrayers() {
         )}
         ListEmptyComponent={<Text style={styles.empty}>기도제목이 없습니다</Text>}
       />
+
+      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+        <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>기도제목 나누기</Text>
+            <TouchableOpacity onPress={() => { setModalVisible(false); setDraft(''); }}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="기도제목을 나눠주세요..."
+            multiline
+            value={draft}
+            onChangeText={setDraft}
+            textAlignVertical="top"
+            autoFocus
+            maxLength={500}
+          />
+          <Text style={styles.charCount}>{draft.length} / 500</Text>
+          <TouchableOpacity
+            style={[styles.submitBtn, (!draft.trim() || loading) && styles.submitDisabled]}
+            onPress={submit}
+            disabled={!draft.trim() || loading}
+          >
+            <Text style={styles.submitText}>{loading ? '전송 중...' : '나누기'}</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -69,11 +120,20 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 16, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   title: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
   cellBadge: { fontSize: 13, color: '#2563EB', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, overflow: 'hidden' },
-  list: { padding: 16 },
+  list: { padding: 16, paddingBottom: 100 },
   card: { padding: 16, borderRadius: 14, backgroundColor: '#F9FAFB', marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   name: { fontWeight: '700', fontSize: 15, color: '#111827' },
   date: { fontSize: 12, color: '#9CA3AF' },
   body: { fontSize: 15, color: '#374151', lineHeight: 22 },
   empty: { textAlign: 'center', marginTop: 60, color: '#aaa', fontSize: 15 },
+  fab: { position: 'absolute', bottom: 100, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', shadowColor: '#2563EB', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  modal: { flex: 1, padding: 24, paddingTop: 32 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
+  input: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 16, fontSize: 16, height: 180, lineHeight: 24, backgroundColor: '#F9FAFB' },
+  charCount: { fontSize: 12, color: '#9CA3AF', textAlign: 'right', marginTop: 6, marginBottom: 16 },
+  submitBtn: { backgroundColor: '#2563EB', borderRadius: 14, padding: 18, alignItems: 'center' },
+  submitDisabled: { opacity: 0.4 },
+  submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
