@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -11,6 +12,7 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
 
 export default function MemberLayout() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
@@ -48,8 +50,8 @@ export default function MemberLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
-      <Tabs.Screen name="index"   options={{ title: '기도제목', tabBarIcon: ({ focused }) => <TabIcon name="heart"  focused={focused} /> }} />
-      <Tabs.Screen name="profile" options={{ title: '프로필',  tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }} />
+      <Tabs.Screen name="index"   options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"  focused={focused} /> }} />
+      <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }} />
     </Tabs>
   );
 }

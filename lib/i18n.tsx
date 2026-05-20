@@ -6,6 +6,7 @@ export type Lang = 'ko' | 'en';
 const strings = {
   ko: {
     // Nav
+    home: '홈',
     prayerRequests: '기도제목',
     members: '멤버',
     cells: '셀',
@@ -59,6 +60,7 @@ const strings = {
   },
   en: {
     // Nav
+    home: 'Home',
     prayerRequests: 'Prayer Requests',
     members: 'Members',
     cells: 'Cells',
