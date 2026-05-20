@@ -3,13 +3,19 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 
-type Stats = { members: number; cells: number; prayers: number };
+type Stats = { members: number; cells: number; prayers: number; attended: number };
+
+function getLastSunday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  return d.toISOString().split('T')[0];
+}
 
 export default function AdminHome() {
   const router = useRouter();
   const [adminName, setAdminName] = useState('');
   const [churchName, setChurchName] = useState('');
-  const [stats, setStats] = useState<Stats>({ members: 0, cells: 0, prayers: 0 });
+  const [stats, setStats] = useState<Stats>({ members: 0, cells: 0, prayers: 0, attended: 0 });
 
   useEffect(() => { loadData(); }, []);
 
@@ -32,13 +38,16 @@ export default function AdminHome() {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [{ count: memberCount }, { count: cellCount }, { count: prayerCount }] = await Promise.all([
+    const [{ count: memberCount }, { count: cellCount }, { count: prayerCount }, { data: attendanceData }] = await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('church_id', churchId),
       supabase.from('cells').select('id', { count: 'exact', head: true }).eq('church_id', churchId),
       supabase.from('prayer_requests').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
+      supabase.from('attendance_records').select('present').eq('meeting_date', getLastSunday()),
     ]);
 
-    setStats({ members: memberCount ?? 0, cells: cellCount ?? 0, prayers: prayerCount ?? 0 });
+    const attended = (attendanceData ?? []).filter(r => r.present).length;
+
+    setStats({ members: memberCount ?? 0, cells: cellCount ?? 0, prayers: prayerCount ?? 0, attended });
   }
 
   const quickMenus = [
@@ -61,8 +70,8 @@ export default function AdminHome() {
 
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
-          <Text style={[styles.statNum, { color: '#2563EB' }]}>{stats.members}</Text>
-          <Text style={styles.statLabel}>성도</Text>
+          <Text style={[styles.statNum, { color: '#2563EB' }]}>{stats.attended}/{stats.members}</Text>
+          <Text style={styles.statLabel}>출석</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}>
           <Text style={[styles.statNum, { color: '#16A34A' }]}>{stats.cells}</Text>
@@ -99,7 +108,7 @@ const styles = StyleSheet.create({
   church: { fontSize: 14, color: '#9CA3AF', marginTop: 4, marginBottom: 24 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 32 },
   statCard: { flex: 1, borderRadius: 16, padding: 16, alignItems: 'center' },
-  statNum: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  statNum: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
   statLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
   menuCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },

@@ -7,13 +7,13 @@ type PrayerRequest = {
   id: string;
   body: string;
   created_at: string;
+  pray_count: number;
   users: { name: string } | null;
 };
 
 export default function LeaderPrayers() {
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [cellName, setCellName] = useState('');
-  const [cellId, setCellId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,18 +31,26 @@ export default function LeaderPrayers() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: me } = await supabase.from('users').select('cell_id').eq('id', user!.id).single();
     if (!me?.cell_id) return;
-    setCellId(me.cell_id);
 
     const [{ data: cell }, { data: prayers }] = await Promise.all([
       supabase.from('cells').select('name').eq('id', me.cell_id).single(),
       supabase.from('prayer_requests')
-        .select('id, body, created_at, users(name)')
+        .select('id, body, created_at, pray_count, users(name)')
         .eq('cell_id', me.cell_id)
         .order('created_at', { ascending: false }),
     ]);
 
     setCellName(cell?.name ?? '');
     setRequests((prayers ?? []) as any);
+  }
+
+  async function pray(id: string, currentCount: number) {
+    const { error } = await supabase
+      .from('prayer_requests')
+      .update({ pray_count: currentCount + 1 })
+      .eq('id', id);
+    if (error) { Alert.alert('오류', error.message); return; }
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, pray_count: r.pray_count + 1 } : r));
   }
 
   async function submit() {
@@ -74,6 +82,13 @@ export default function LeaderPrayers() {
               <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR')}</Text>
             </View>
             <Text style={styles.body}>{item.body}</Text>
+            <View style={styles.cardFooter}>
+              <TouchableOpacity style={[styles.prayBtn, item.pray_count > 0 && styles.prayBtnActive]} onPress={() => pray(item.id, item.pray_count)}>
+                <Text style={[styles.prayBtnText, item.pray_count > 0 && styles.prayBtnTextActive]}>
+                  🙏 함께 기도{item.pray_count > 0 ? ` ${item.pray_count}` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>기도제목이 없습니다</Text>}
@@ -126,6 +141,11 @@ const styles = StyleSheet.create({
   name: { fontWeight: '700', fontSize: 15, color: '#111827' },
   date: { fontSize: 12, color: '#9CA3AF' },
   body: { fontSize: 15, color: '#374151', lineHeight: 22 },
+  cardFooter: { marginTop: 12 },
+  prayBtn: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
+  prayBtnActive: { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
+  prayBtnText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+  prayBtnTextActive: { color: '#2563EB' },
   empty: { textAlign: 'center', marginTop: 60, color: '#aaa', fontSize: 15 },
   fab: { position: 'absolute', bottom: 100, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', shadowColor: '#2563EB', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   modal: { flex: 1, padding: 24, paddingTop: 32 },

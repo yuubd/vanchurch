@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
-type Prayer = { id: string; body: string; created_at: string };
+type Prayer = { id: string; body: string; created_at: string; pray_count: number };
 
 export default function MemberHome() {
   const [name, setName] = useState('');
@@ -29,7 +29,7 @@ export default function MemberHome() {
 
     const { data: prayerData } = await supabase
       .from('prayer_requests')
-      .select('id, body, created_at')
+      .select('id, body, created_at, pray_count')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -86,7 +86,12 @@ export default function MemberHome() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.body}>{item.body}</Text>
-            <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</Text>
+            <View style={styles.cardFooter}>
+              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</Text>
+              {item.pray_count > 0 && (
+                <Text style={styles.prayedBadge}>🙏 {item.pray_count}명이 기도했어요</Text>
+              )}
+            </View>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>아직 기도제목이 없어요 🙏</Text>}
@@ -109,7 +114,9 @@ const styles = StyleSheet.create({
   submitText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 14 },
   card: { paddingVertical: 16, borderBottomWidth: 1, borderColor: '#F3F4F6' },
-  body: { fontSize: 15, color: '#111827', lineHeight: 22, marginBottom: 6 },
+  body: { fontSize: 15, color: '#111827', lineHeight: 22, marginBottom: 8 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   date: { fontSize: 12, color: '#9CA3AF' },
+  prayedBadge: { fontSize: 12, color: '#2563EB', fontWeight: '600' },
   empty: { textAlign: 'center', marginTop: 24, color: '#9CA3AF', fontSize: 15 },
 });
