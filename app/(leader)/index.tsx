@@ -117,7 +117,7 @@ export default function LeaderPrayers() {
                 onPress={() => togglePray(item.id, item.prayedByMe)}
               >
                 <Text style={[styles.prayBtnText, item.prayedByMe && styles.prayBtnTextActive]}>
-                  🙏 함께 기도{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
+                  🙏 {item.prayedByMe ? '기도했어요' : '함께 기도'}{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
                 </Text>
               </TouchableOpacity>
             </View>
