@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 type PrayerRequest = {
   id: string;
@@ -8,45 +9,52 @@ type PrayerRequest = {
   created_at: string;
   prayCount: number;
   prayedByMe: boolean;
-  users: { name: string; cells: { name: string } | null } | null;
+  userName: string;
+  cellName: string;
 };
 
 export default function PrayersScreen() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [myId, setMyId] = useState('');
 
   useEffect(() => {
     init();
-    const channel = supabase
-      .channel('prayer_requests')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prayer_requests' }, () => loadRequests(myId))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => {
+    if (myId) loadRequests(myId);
+  }, [myId]);
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setMyId(user.id);
-    loadRequests(user.id);
   }
 
   async function loadRequests(userId: string) {
-    const [{ data: prayers }, { data: myPrays }] = await Promise.all([
+    const [{ data: prayers }, { data: myPrays }, { data: allPrays }, { data: allUsers }] = await Promise.all([
       supabase.from('prayer_requests')
-        .select('id, body, created_at, users(name, cells!users_cell_id_fkey(name))')
+        .select('id, body, created_at, user_id')
         .order('created_at', { ascending: false }),
       supabase.from('prayer_prays').select('prayer_id').eq('user_id', userId),
+      supabase.from('prayer_prays').select('prayer_id'),
+      supabase.from('users').select('id, name, cell_id, cells!users_cell_id_fkey(name)'),
     ]);
 
     const prayedSet = new Set((myPrays ?? []).map(p => p.prayer_id));
-
     const prayCountMap: Record<string, number> = {};
-    const { data: allPrays } = await supabase.from('prayer_prays').select('prayer_id');
     (allPrays ?? []).forEach(p => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
+
+    const userMap: Record<string, { name: string; cellName: string }> = {};
+    (allUsers ?? []).forEach((u: any) => {
+      userMap[u.id] = { name: u.name ?? '', cellName: u.cells?.name ?? '' };
+    });
 
     setRequests((prayers ?? []).map((r: any) => ({
       ...r,
+      userName: userMap[r.user_id]?.name ?? '',
+      cellName: userMap[r.user_id]?.cellName ?? '',
       prayCount: prayCountMap[r.id] ?? 0,
       prayedByMe: prayedSet.has(r.id),
     })));
@@ -69,8 +77,9 @@ export default function PrayersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>기도제목</Text>
+        <Text style={styles.title}>{t('prayerRequests')}</Text>
       </View>
+
       <FlatList
         data={requests}
         keyExtractor={item => item.id}
@@ -78,8 +87,8 @@ export default function PrayersScreen() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.name}>{item.users?.name}</Text>
-              <Text style={styles.cell}>{item.users?.cells?.name}</Text>
+              <Text style={styles.name}>{item.userName}</Text>
+              <Text style={styles.cell}>{item.cellName}</Text>
             </View>
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
@@ -89,13 +98,13 @@ export default function PrayersScreen() {
                 onPress={() => togglePray(item.id, item.prayedByMe)}
               >
                 <Text style={[styles.prayBtnText, item.prayedByMe && styles.prayBtnTextActive]}>
-                  🙏 {item.prayedByMe ? '기도했어요' : '함께 기도'}{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
+                  🙏 {item.prayedByMe ? t('prayed') : t('prayTogether')}{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>기도제목이 없습니다</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('noPrayersAll')}</Text>}
       />
     </View>
   );

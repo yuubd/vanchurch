@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 type Member = { id: string; name: string; present: boolean };
 
-function getDateLabel(date: Date) {
-  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+function getDateLabel(date: Date, lang: string) {
+  const locale = lang === 'en' ? 'en-US' : 'ko-KR';
+  return date.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' });
 }
 
 function getThisSunday(offset = 0) {
@@ -19,6 +21,7 @@ function getThisSunday(offset = 0) {
 }
 
 export default function LeaderMembers() {
+  const { t, lang } = useTranslation();
   const [members, setMembers] = useState<Member[]>([]);
   const [cellId, setCellId] = useState<string | null>(null);
   const [cellName, setCellName] = useState('');
@@ -74,7 +77,7 @@ export default function LeaderMembers() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>출석</Text>
+        <Text style={styles.title}>{t('attendance')}</Text>
         {cellName ? <Text style={styles.cellBadge}>{cellName}</Text> : null}
       </View>
 
@@ -82,13 +85,13 @@ export default function LeaderMembers() {
         <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn}>
           <Ionicons name="chevron-back" size={20} color="#374151" />
         </TouchableOpacity>
-        <Text style={styles.dateLabel}>{getDateLabel(sunday)}</Text>
+        <Text style={styles.dateLabel}>{getDateLabel(sunday, lang)}</Text>
         <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0}>
           <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? '#D1D5DB' : '#374151'} />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.summary}>{presentCount} / {members.length}명 출석</Text>
+      <Text style={styles.summary}>{presentCount} / {members.length}{t('attendanceSummary')}</Text>
 
       <FlatList
         data={members}
@@ -109,7 +112,7 @@ export default function LeaderMembers() {
 
       <View style={styles.footer}>
         <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={save} disabled={saving}>
-          <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '저장하기'}</Text>
+          <Text style={styles.saveBtnText}>{saving ? t('saving') : t('saveBtn')}</Text>
         </TouchableOpacity>
       </View>
     </View>

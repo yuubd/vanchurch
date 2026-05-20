@@ -48,6 +48,18 @@ const strings = {
     deleteCell: '셀 삭제',
     deleteConfirm: '정말 삭제하시겠습니까?',
     cellNamePlaceholder: '1셀, 청년부 1셀...',
+    // Attendance
+    attendanceSummary: '명 출석',
+    saving: '저장 중...',
+    saveBtn: '저장하기',
+    // Prayer actions
+    prayTogether: '함께 기도',
+    prayed: '기도했어요',
+    sending: '전송 중...',
+    share: '나누기',
+    sharePrayerTitle: '기도제목 나누기',
+    noPrayersThisWeek: '이번 주 기도제목이 없습니다',
+    noPrayersAll: '기도제목이 없습니다',
     // Profile
     myProfile: '내 프로필',
     language: '언어',
@@ -102,6 +114,18 @@ const strings = {
     deleteCell: 'Delete cell',
     deleteConfirm: 'Are you sure?',
     cellNamePlaceholder: '1st Cell, Youth Cell...',
+    // Attendance
+    attendanceSummary: ' present',
+    saving: 'Saving...',
+    saveBtn: 'Save',
+    // Prayer actions
+    prayTogether: 'Pray Together',
+    prayed: 'Prayed',
+    sending: 'Sending...',
+    share: 'Share',
+    sharePrayerTitle: 'Share Prayer Request',
+    noPrayersThisWeek: 'No prayers this week',
+    noPrayersAll: 'No prayer requests',
     // Profile
     myProfile: 'My Profile',
     language: 'Language',
