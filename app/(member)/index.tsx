@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
-type Prayer = { id: string; body: string; created_at: string; pray_count: number };
+type Prayer = { id: string; body: string; created_at: string; prayCount: number };
 
 export default function MemberHome() {
   const [name, setName] = useState('');
@@ -27,13 +27,19 @@ export default function MemberHome() {
     const cell = (data as any)?.cells?.name ?? '';
     setChurchCell([church, cell].filter(Boolean).join(' · '));
 
-    const { data: prayerData } = await supabase
-      .from('prayer_requests')
-      .select('id, body, created_at, pray_count')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    setPrayers(prayerData ?? []);
+    const [{ data: prayerData }, { data: allPrays }] = await Promise.all([
+      supabase.from('prayer_requests')
+        .select('id, body, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase.from('prayer_prays').select('prayer_id'),
+    ]);
+
+    const prayCountMap: Record<string, number> = {};
+    (allPrays ?? []).forEach(p => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
+
+    setPrayers((prayerData ?? []).map((r: any) => ({ ...r, prayCount: prayCountMap[r.id] ?? 0 })));
   }
 
   async function submit() {
@@ -88,8 +94,8 @@ export default function MemberHome() {
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
               <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</Text>
-              {item.pray_count > 0 && (
-                <Text style={styles.prayedBadge}>🙏 {item.pray_count}명이 기도했어요</Text>
+              {item.prayCount > 0 && (
+                <Text style={styles.prayedBadge}>🙏 {item.prayCount}명이 기도했어요</Text>
               )}
             </View>
           </View>

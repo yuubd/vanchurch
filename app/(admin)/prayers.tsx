@@ -2,35 +2,68 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
-type PrayerRequest = { id: string; body: string; created_at: string; pray_count: number; users: { name: string; cells: { name: string } | null } | null };
+type PrayerRequest = {
+  id: string;
+  body: string;
+  created_at: string;
+  prayCount: number;
+  prayedByMe: boolean;
+  users: { name: string; cells: { name: string } | null } | null;
+};
 
 export default function PrayersScreen() {
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
+  const [myId, setMyId] = useState('');
 
   useEffect(() => {
-    loadRequests();
+    init();
     const channel = supabase
       .channel('prayer_requests')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prayer_requests' }, () => loadRequests())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prayer_requests' }, () => loadRequests(myId))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  async function loadRequests() {
-    const { data } = await supabase
-      .from('prayer_requests')
-      .select('id, body, created_at, pray_count, users(name, cells!users_cell_id_fkey(name))')
-      .order('created_at', { ascending: false });
-    setRequests((data ?? []) as any);
+  async function init() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setMyId(user.id);
+    loadRequests(user.id);
   }
 
-  async function pray(id: string, currentCount: number) {
-    const { error } = await supabase
-      .from('prayer_requests')
-      .update({ pray_count: currentCount + 1 })
-      .eq('id', id);
-    if (error) { Alert.alert('오류', error.message); return; }
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, pray_count: r.pray_count + 1 } : r));
+  async function loadRequests(userId: string) {
+    const [{ data: prayers }, { data: myPrays }] = await Promise.all([
+      supabase.from('prayer_requests')
+        .select('id, body, created_at, users(name, cells!users_cell_id_fkey(name))')
+        .order('created_at', { ascending: false }),
+      supabase.from('prayer_prays').select('prayer_id').eq('user_id', userId),
+    ]);
+
+    const prayedSet = new Set((myPrays ?? []).map(p => p.prayer_id));
+
+    const prayCountMap: Record<string, number> = {};
+    const { data: allPrays } = await supabase.from('prayer_prays').select('prayer_id');
+    (allPrays ?? []).forEach(p => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
+
+    setRequests((prayers ?? []).map((r: any) => ({
+      ...r,
+      prayCount: prayCountMap[r.id] ?? 0,
+      prayedByMe: prayedSet.has(r.id),
+    })));
+  }
+
+  async function togglePray(id: string, prayedByMe: boolean) {
+    if (prayedByMe) {
+      const { error } = await supabase.from('prayer_prays').delete().match({ prayer_id: id, user_id: myId });
+      if (error) { Alert.alert('오류', error.message); return; }
+    } else {
+      const { error } = await supabase.from('prayer_prays').insert({ prayer_id: id, user_id: myId });
+      if (error) { Alert.alert('오류', error.message); return; }
+    }
+    setRequests(prev => prev.map(r => r.id === id
+      ? { ...r, prayedByMe: !prayedByMe, prayCount: r.prayCount + (prayedByMe ? -1 : 1) }
+      : r
+    ));
   }
 
   return (
@@ -51,9 +84,12 @@ export default function PrayersScreen() {
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
               <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR')}</Text>
-              <TouchableOpacity style={[styles.prayBtn, item.pray_count > 0 && styles.prayBtnActive]} onPress={() => pray(item.id, item.pray_count)}>
-                <Text style={[styles.prayBtnText, item.pray_count > 0 && styles.prayBtnTextActive]}>
-                  🙏 함께 기도{item.pray_count > 0 ? ` ${item.pray_count}` : ''}
+              <TouchableOpacity
+                style={[styles.prayBtn, item.prayedByMe && styles.prayBtnActive]}
+                onPress={() => togglePray(item.id, item.prayedByMe)}
+              >
+                <Text style={[styles.prayBtnText, item.prayedByMe && styles.prayBtnTextActive]}>
+                  🙏 함께 기도{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -77,7 +113,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 15, color: '#374151', lineHeight: 22 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   date: { fontSize: 12, color: '#9CA3AF' },
-  prayBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
+  prayBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
   prayBtnActive: { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
   prayBtnText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
   prayBtnTextActive: { color: '#2563EB' },

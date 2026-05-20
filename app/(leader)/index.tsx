@@ -7,50 +7,79 @@ type PrayerRequest = {
   id: string;
   body: string;
   created_at: string;
-  pray_count: number;
+  prayCount: number;
+  prayedByMe: boolean;
   users: { name: string } | null;
 };
 
 export default function LeaderPrayers() {
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [cellName, setCellName] = useState('');
+  const [cellId, setCellId] = useState('');
+  const [myId, setMyId] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadData();
+    init();
     const channel = supabase
       .channel('leader_prayers')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prayer_requests' }, () => loadData())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prayer_requests' }, () => loadRequests(cellId, myId))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  async function loadData() {
+  async function init() {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: me } = await supabase.from('users').select('cell_id').eq('id', user!.id).single();
+    if (!user) return;
+    setMyId(user.id);
+
+    const { data: me } = await supabase.from('users').select('cell_id').eq('id', user.id).single();
     if (!me?.cell_id) return;
+    setCellId(me.cell_id);
 
-    const [{ data: cell }, { data: prayers }] = await Promise.all([
-      supabase.from('cells').select('name').eq('id', me.cell_id).single(),
-      supabase.from('prayer_requests')
-        .select('id, body, created_at, pray_count, users(name)')
-        .eq('cell_id', me.cell_id)
-        .order('created_at', { ascending: false }),
-    ]);
-
+    const { data: cell } = await supabase.from('cells').select('name').eq('id', me.cell_id).single();
     setCellName(cell?.name ?? '');
-    setRequests((prayers ?? []) as any);
+
+    loadRequests(me.cell_id, user.id);
   }
 
-  async function pray(id: string, currentCount: number) {
-    const { error } = await supabase
-      .from('prayer_requests')
-      .update({ pray_count: currentCount + 1 })
-      .eq('id', id);
-    if (error) { Alert.alert('오류', error.message); return; }
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, pray_count: r.pray_count + 1 } : r));
+  async function loadRequests(cId: string, userId: string) {
+    if (!cId || !userId) return;
+
+    const [{ data: prayers }, { data: myPrays }, { data: allPrays }] = await Promise.all([
+      supabase.from('prayer_requests')
+        .select('id, body, created_at, users(name)')
+        .eq('cell_id', cId)
+        .order('created_at', { ascending: false }),
+      supabase.from('prayer_prays').select('prayer_id').eq('user_id', userId),
+      supabase.from('prayer_prays').select('prayer_id'),
+    ]);
+
+    const prayedSet = new Set((myPrays ?? []).map(p => p.prayer_id));
+    const prayCountMap: Record<string, number> = {};
+    (allPrays ?? []).forEach(p => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
+
+    setRequests((prayers ?? []).map((r: any) => ({
+      ...r,
+      prayCount: prayCountMap[r.id] ?? 0,
+      prayedByMe: prayedSet.has(r.id),
+    })));
+  }
+
+  async function togglePray(id: string, prayedByMe: boolean) {
+    if (prayedByMe) {
+      const { error } = await supabase.from('prayer_prays').delete().match({ prayer_id: id, user_id: myId });
+      if (error) { Alert.alert('오류', error.message); return; }
+    } else {
+      const { error } = await supabase.from('prayer_prays').insert({ prayer_id: id, user_id: myId });
+      if (error) { Alert.alert('오류', error.message); return; }
+    }
+    setRequests(prev => prev.map(r => r.id === id
+      ? { ...r, prayedByMe: !prayedByMe, prayCount: r.prayCount + (prayedByMe ? -1 : 1) }
+      : r
+    ));
   }
 
   async function submit() {
@@ -62,7 +91,7 @@ export default function LeaderPrayers() {
     if (error) { Alert.alert('오류', error.message); return; }
     setDraft('');
     setModalVisible(false);
-    loadData();
+    loadRequests(cellId, myId);
   }
 
   return (
@@ -83,9 +112,12 @@ export default function LeaderPrayers() {
             </View>
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
-              <TouchableOpacity style={[styles.prayBtn, item.pray_count > 0 && styles.prayBtnActive]} onPress={() => pray(item.id, item.pray_count)}>
-                <Text style={[styles.prayBtnText, item.pray_count > 0 && styles.prayBtnTextActive]}>
-                  🙏 함께 기도{item.pray_count > 0 ? ` ${item.pray_count}` : ''}
+              <TouchableOpacity
+                style={[styles.prayBtn, item.prayedByMe && styles.prayBtnActive]}
+                onPress={() => togglePray(item.id, item.prayedByMe)}
+              >
+                <Text style={[styles.prayBtnText, item.prayedByMe && styles.prayBtnTextActive]}>
+                  🙏 함께 기도{item.prayCount > 0 ? ` ${item.prayCount}` : ''}
                 </Text>
               </TouchableOpacity>
             </View>
