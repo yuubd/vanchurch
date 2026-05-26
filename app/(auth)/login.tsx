@@ -40,9 +40,14 @@ function formatPhone(digits: string, deleting: boolean): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
 
+function showError(msg: string) {
+  if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('오류', msg); }
+}
+
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   function handlePhoneChange(text: string) {
     const digits = text.replace(/\D/g, '').slice(0, 10);
@@ -52,16 +57,17 @@ export default function LoginScreen() {
 
   async function sendOtp() {
     const formatted = toE164(phone);
+    setError('');
     if (phone.replace(/\D/g, '').length < 10) return;
     if (!isAllowed(phone)) {
-      Alert.alert('알림', '현재 테스트 중인 번호만 로그인 가능합니다.\nOnly approved numbers can sign in during testing.');
+      setError('현재 테스트 중인 번호만 로그인 가능합니다.');
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: formatted });
-    if (error) {
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: formatted });
+    if (otpError) {
       setLoading(false);
-      Alert.alert('오류', error.message);
+      setError(otpError.message);
       return;
     }
     // Edge function saves OTP asynchronously — poll until it appears (up to 5s)
@@ -73,12 +79,12 @@ export default function LoginScreen() {
     }
     if (!otp) {
       setLoading(false);
-      Alert.alert('오류', 'OTP를 가져오지 못했습니다. 다시 시도해주세요.');
+      setError('OTP를 가져오지 못했습니다. 다시 시도해주세요.');
       return;
     }
     const { error: verifyError } = await supabase.auth.verifyOtp({ phone: formatted, token: otp, type: 'sms' });
     setLoading(false);
-    if (verifyError) Alert.alert('오류', verifyError.message);
+    if (verifyError) setError(verifyError.message);
     // On success _layout.tsx handles redirect via onAuthStateChange
   }
 
@@ -104,6 +110,7 @@ export default function LoginScreen() {
           >
             <Text style={styles.btnText}>{loading ? '...' : '로그인'}</Text>
           </TouchableOpacity>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -121,4 +128,5 @@ const styles = StyleSheet.create({
   btn: { backgroundColor: '#1D3FAA', borderRadius: 14, padding: 18, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  error: { color: '#DC2626', fontSize: 13, marginTop: 10, textAlign: 'center' },
 });
