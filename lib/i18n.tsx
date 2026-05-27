@@ -52,6 +52,12 @@ const strings = {
     attendanceSummary: '명 출석',
     saving: '저장 중...',
     saveBtn: '저장하기',
+    // Member home
+    greeting: '안녕하세요',
+    greetingSuffix: '님 👋',
+    recentPrayers: '최근 내 기도제목',
+    noPrayersYet: '아직 기도제목이 없어요 🙏',
+    prayedCount: '명이 기도했어요',
     // Prayer actions
     prayTogether: '함께 기도',
     prayed: '기도했어요',
@@ -118,6 +124,12 @@ const strings = {
     attendanceSummary: ' present',
     saving: 'Saving...',
     saveBtn: 'Save',
+    // Member home
+    greeting: 'Hello',
+    greetingSuffix: '! 👋',
+    recentPrayers: 'My Recent Prayers',
+    noPrayersYet: 'No prayer requests yet 🙏',
+    prayedCount: ' prayed',
     // Prayer actions
     prayTogether: 'Pray Together',
     prayed: 'Prayed',

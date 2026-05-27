@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 type Prayer = { id: string; body: string; created_at: string; prayCount: number };
 
 export default function MemberHome() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [churchCell, setChurchCell] = useState('');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
@@ -61,13 +63,13 @@ export default function MemberHome() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View>
-            <Text style={styles.greeting}>안녕하세요, {name}님 👋</Text>
+            <Text style={styles.greeting}>{t('greeting')}, {name}{t('greetingSuffix')}</Text>
             <Text style={styles.sub}>{churchCell}</Text>
 
             <View style={styles.compose}>
               <TextInput
                 style={styles.input}
-                placeholder="기도제목을 나눠주세요..."
+                placeholder={t('sharePrayer')}
                 multiline
                 value={draft}
                 onChangeText={setDraft}
@@ -81,26 +83,26 @@ export default function MemberHome() {
                   onPress={submit}
                   disabled={!draft.trim() || loading}
                 >
-                  <Text style={styles.submitText}>{loading ? '전송 중...' : '나누기'}</Text>
+                  <Text style={styles.submitText}>{loading ? t('sending') : t('share')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.sectionLabel}>최근 내 기도제목</Text>
+            <Text style={styles.sectionLabel}>{t('recentPrayers')}</Text>
           </View>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</Text>
+              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(t('greeting') === 'Hello' ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' })}</Text>
               {item.prayCount > 0 && (
-                <Text style={styles.prayedBadge}>🙏 {item.prayCount}명이 기도했어요</Text>
+                <Text style={styles.prayedBadge}>🙏 {item.prayCount}{t('prayedCount')}</Text>
               )}
             </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>아직 기도제목이 없어요 🙏</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('noPrayersYet')}</Text>}
       />
     </KeyboardAvoidingView>
   );
