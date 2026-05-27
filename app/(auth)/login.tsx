@@ -19,6 +19,7 @@ const ALLOW_LIST = [
   '+11000000007',
   '+11000000008',
   '+11000000009',
+  '+11000000010',
 ];
 
 function toE164(raw: string): string {
