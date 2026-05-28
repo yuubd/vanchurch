@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
-import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
 
 type Cell = { id: string; name: string };
@@ -12,14 +11,23 @@ const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
 
 const ROLE_PRIORITY: Record<string, number> = { pastor: 0, admin: 1, cell_leader: 2, member: 3 };
 
-function sortMembers(list: Member[]): Member[] {
+type SortMode = 'name' | 'cell' | 'role';
+const SORT_MODES: SortMode[] = ['cell', 'name', 'role'];
+const SORT_LABELS: Record<SortMode, string> = { name: '이름순', cell: '셀순', role: '권한순' };
+
+function sortMembers(list: Member[], mode: SortMode, asc: boolean): Member[] {
+  const dir = asc ? 1 : -1;
   return [...list].sort((a, b) => {
-    const cellA = a.cells?.name ?? '￿';
-    const cellB = b.cells?.name ?? '￿';
-    if (cellA !== cellB) return cellA.localeCompare(cellB);
+    if (mode === 'name') return dir * a.name.localeCompare(b.name);
+    if (mode === 'cell') {
+      const cellA = a.cells?.name ?? '￿';
+      const cellB = b.cells?.name ?? '￿';
+      if (cellA !== cellB) return dir * cellA.localeCompare(cellB);
+      return a.name.localeCompare(b.name);
+    }
     const roleA = Math.min(...(a.roles.map(r => ROLE_PRIORITY[r] ?? 99)));
     const roleB = Math.min(...(b.roles.map(r => ROLE_PRIORITY[r] ?? 99)));
-    if (roleA !== roleB) return roleA - roleB;
+    if (roleA !== roleB) return dir * (roleA - roleB);
     return a.name.localeCompare(b.name);
   });
 }
@@ -36,6 +44,8 @@ export default function MembersScreen() {
   const [cells, setCells] = useState<Cell[]>([]);
   const [editing, setEditing] = useState<Member | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('cell');
+  const [sortAsc, setSortAsc] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => { loadData(); }, []);
@@ -45,7 +55,7 @@ export default function MembersScreen() {
       supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)'),
       supabase.from('cells').select('id, name').order('name'),
     ]);
-    setMembers(sortMembers((memberData ?? []) as any));
+    setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
   }
 
@@ -70,11 +80,27 @@ export default function MembersScreen() {
     });
   }
 
+  const sorted = sortMembers(members, sortMode, sortAsc);
+
+  function cycleSort() {
+    if (sortAsc) {
+      setSortAsc(false);
+    } else {
+      setSortAsc(true);
+      setSortMode(m => SORT_MODES[(SORT_MODES.indexOf(m) + 1) % SORT_MODES.length]);
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <Header title={t('members')} />
+      <View style={styles.headerRow}>
+        <Text style={styles.headerTitle}>{t('members')}</Text>
+        <TouchableOpacity onPress={cycleSort}>
+          <Text style={styles.sortBtnText}>{SORT_LABELS[sortMode]} {sortAsc ? '↑' : '↓'}</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
-        data={members}
+        data={sorted}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => setEditing({ ...item })}>
@@ -125,6 +151,9 @@ export default function MembersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#eee' },
+  headerTitle: { fontSize: 20, fontWeight: '700' },
+  sortBtnText: { fontSize: 13, color: '#9CA3AF' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
   name: { fontSize: 16, fontWeight: '500' },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 4 },

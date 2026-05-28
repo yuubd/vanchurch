@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Platform, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
@@ -13,6 +12,7 @@ export default function CellsScreen() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [editing, setEditing] = useState<Cell | null>(null);
   const [adding, setAdding] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const { t } = useTranslation();
@@ -53,20 +53,11 @@ export default function CellsScreen() {
     loadData();
   }
 
-  async function deleteCell(id: string) {
-    if (Platform.OS === 'web') {
-      if (!window.confirm(t('deleteConfirm'))) return;
-      await supabase.from('cells').delete().eq('id', id);
-      loadData();
-    } else {
-      Alert.alert(t('deleteCell'), t('deleteConfirm'), [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('delete'), style: 'destructive', onPress: async () => {
-          await supabase.from('cells').delete().eq('id', id);
-          loadData();
-        }},
-      ]);
-    }
+  async function confirmDelete() {
+    if (!confirmDeleteId) return;
+    await supabase.from('cells').delete().eq('id', confirmDeleteId);
+    setConfirmDeleteId(null);
+    loadData();
   }
 
   function toggleSubLeader(id: string) {
@@ -101,10 +92,10 @@ export default function CellsScreen() {
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{t('cellLeader')}: {item.leader?.name ?? t('none')}</Text>
               {!!subLeaderNames(item) && (
-                <Text style={styles.meta}>부셀리더: {subLeaderNames(item)}</Text>
+                <Text style={styles.meta}>{t('subCellLeader')}: {subLeaderNames(item)}</Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteCell(item.id)}>
+            <TouchableOpacity onPress={() => setConfirmDeleteId(item.id)}>
               <Text style={styles.delete}>{t('delete')}</Text>
             </TouchableOpacity>
           </View>
@@ -118,11 +109,22 @@ export default function CellsScreen() {
           <Text style={styles.label}>{t('cellName')}</Text>
           <TextInput style={styles.input} value={editing?.name ?? ''} onChangeText={v => setEditing(e => e ? { ...e, name: v } : e)} />
           <Text style={styles.label}>{t('cellLeader')}</Text>
-          <Picker selectedValue={editing?.leader_id ?? ''} onValueChange={v => setEditing(e => e ? { ...e, leader_id: v || null } : e)}>
-            <Picker.Item label={t('none')} value="" />
-            {leaders.map(l => <Picker.Item key={l.id} label={l.name} value={l.id} />)}
-          </Picker>
-          <Text style={styles.label}>부셀리더</Text>
+          {[{ id: '', name: t('none') }, ...leaders].map(l => {
+            const active = (editing?.leader_id ?? '') === l.id;
+            const isSub = editing?.sub_leader_ids?.includes(l.id) ?? false;
+            return (
+              <TouchableOpacity
+                key={l.id}
+                style={[styles.subRow, active && styles.subRowActive, isSub && styles.subRowDisabled]}
+                onPress={() => !isSub && setEditing(e => e ? { ...e, leader_id: l.id || null } : e)}
+                disabled={isSub}
+              >
+                <Text style={[styles.subLabel, active && styles.subLabelActive, isSub && styles.subLabelDisabled]}>{l.name}</Text>
+                <Text style={styles.subCheck}>{active ? '✓' : ''}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <Text style={styles.label}>{t('subCellLeader')}</Text>
           {leaders.map(l => {
             const active = editing?.sub_leader_ids?.includes(l.id) ?? false;
             const isLeader = editing?.leader_id === l.id;
@@ -145,6 +147,23 @@ export default function CellsScreen() {
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </ScrollView>
+      </Modal>
+
+      <Modal visible={!!confirmDeleteId} animationType="fade" transparent>
+        <View style={styles.overlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>{t('deleteCell')}</Text>
+            <Text style={styles.confirmMsg}>{t('deleteConfirm')}</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancel} onPress={() => setConfirmDeleteId(null)}>
+                <Text style={styles.confirmCancelText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmDelete} onPress={confirmDelete}>
+                <Text style={styles.confirmDeleteText}>{t('delete')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={adding} animationType="slide" presentationStyle="pageSheet">
@@ -190,4 +209,13 @@ const styles = StyleSheet.create({
   cancelBtn: { alignItems: 'center', marginTop: 16, marginBottom: 40 },
   cancelText: { color: '#888', fontSize: 15 },
   disabled: { opacity: 0.5 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  confirmBox: { backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 },
+  confirmTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  confirmMsg: { fontSize: 15, color: '#6B7280', marginBottom: 24 },
+  confirmBtns: { flexDirection: 'row', gap: 12 },
+  confirmCancel: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
+  confirmCancelText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  confirmDelete: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#EF4444', alignItems: 'center' },
+  confirmDeleteText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });

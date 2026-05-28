@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+
+function getWeekRange(offset: number, lang: string): { start: string; end: string; label: string } {
+  const locale = lang === 'en' ? 'en-US' : 'ko-KR';
+  const now = new Date();
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - now.getDay() + offset * 7);
+  sunday.setHours(0, 0, 0, 0);
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
+  const label = sunday.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) +
+    ' – ' + saturday.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  return { start: sunday.toISOString(), end: saturday.toISOString(), label };
+}
 
 type PrayerRequest = {
   id: string;
@@ -14,9 +29,12 @@ type PrayerRequest = {
 };
 
 export default function PrayersScreen() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [myId, setMyId] = useState('');
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const week = getWeekRange(weekOffset, lang);
 
   useEffect(() => {
     init();
@@ -24,7 +42,7 @@ export default function PrayersScreen() {
 
   useEffect(() => {
     if (myId) loadRequests(myId);
-  }, [myId]);
+  }, [myId, weekOffset]);
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,9 +51,12 @@ export default function PrayersScreen() {
   }
 
   async function loadRequests(userId: string) {
+    const { start, end } = getWeekRange(weekOffset, lang);
     const [{ data: prayers }, { data: myPrays }, { data: allPrays }, { data: allUsers }] = await Promise.all([
       supabase.from('prayer_requests')
         .select('id, body, created_at, user_id')
+        .gte('created_at', start)
+        .lte('created_at', end)
         .order('created_at', { ascending: false }),
       supabase.from('prayer_prays').select('prayer_id').eq('user_id', userId),
       supabase.from('prayer_prays').select('prayer_id'),
@@ -80,6 +101,16 @@ export default function PrayersScreen() {
         <Text style={styles.title}>{t('prayerRequests')}</Text>
       </View>
 
+      <View style={styles.dateNav}>
+        <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn}>
+          <Ionicons name="chevron-back" size={20} color="#374151" />
+        </TouchableOpacity>
+        <Text style={styles.dateLabel}>{week.label}</Text>
+        <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0}>
+          <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? '#D1D5DB' : '#374151'} />
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={requests}
         keyExtractor={item => item.id}
@@ -114,6 +145,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   title: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
+  dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingVertical: 12, borderBottomWidth: 1, borderColor: '#F3F4F6' },
+  navBtn: { padding: 4 },
+  dateLabel: { fontSize: 14, fontWeight: '700', color: '#111827', minWidth: 160, textAlign: 'center' },
   list: { padding: 16 },
   card: { padding: 16, borderRadius: 14, backgroundColor: '#F9FAFB', marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },

@@ -47,6 +47,7 @@ const strings = {
     delete: '삭제',
     deleteCell: '셀 삭제',
     deleteConfirm: '정말 삭제하시겠습니까?',
+    subCellLeader: '부셀리더',
     cellNamePlaceholder: '1셀, 청년부 1셀...',
     // Attendance
     attendanceSummary: '명 출석',
@@ -119,6 +120,7 @@ const strings = {
     delete: 'Delete',
     deleteCell: 'Delete cell',
     deleteConfirm: 'Are you sure?',
+    subCellLeader: 'Sub-leader',
     cellNamePlaceholder: '1st Cell, Youth Cell...',
     // Attendance
     attendanceSummary: ' present',

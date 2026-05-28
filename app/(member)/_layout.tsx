@@ -43,11 +43,14 @@ export default function MemberLayout() {
           borderTopWidth: 0.5,
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',
+          height: 70,
         },
         tabBarItemStyle: {
-          paddingTop: 8,
+          paddingTop: 6,
+          paddingBottom: 6,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '400' },
+        tabBarShowLabel: true,
       }}
     >
       <Tabs.Screen name="index"   options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"  focused={focused} /> }} />
