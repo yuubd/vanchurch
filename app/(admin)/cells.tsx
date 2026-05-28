@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Platform, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
 
 type Leader = { id: string; name: string };
-type Cell = { id: string; name: string; leader_id: string | null; users: { name: string } | null };
+type Cell = { id: string; name: string; leader_id: string | null; sub_leader_ids: string[]; leader: { name: string } | null };
 
 export default function CellsScreen() {
   const [cells, setCells] = useState<Cell[]>([]);
@@ -21,7 +21,7 @@ export default function CellsScreen() {
 
   async function loadData() {
     const [{ data: cellData }, { data: leaderData }] = await Promise.all([
-      supabase.from('cells').select('id, name, leader_id, users!cells_leader_id_fkey(name)').order('name'),
+      supabase.from('cells').select('id, name, leader_id, sub_leader_ids, leader:users!cells_leader_id_fkey(name)').order('name'),
       supabase.from('users').select('id, name').overlaps('roles', ['cell_leader', 'admin', 'pastor']).order('name'),
     ]);
     setCells((cellData ?? []) as any);
@@ -32,11 +32,8 @@ export default function CellsScreen() {
     if (!editing) return;
     setSaving(true);
     const { error } = await supabase.from('cells')
-      .update({ name: editing.name, leader_id: editing.leader_id })
+      .update({ name: editing.name, leader_id: editing.leader_id, sub_leader_ids: editing.sub_leader_ids })
       .eq('id', editing.id);
-    if (!error && editing.leader_id) {
-      await supabase.from('users').update({ cell_id: editing.id }).eq('id', editing.leader_id);
-    }
     setSaving(false);
     if (error) { Alert.alert('Error', error.message); return; }
     setEditing(null);
@@ -72,6 +69,23 @@ export default function CellsScreen() {
     }
   }
 
+  function toggleSubLeader(id: string) {
+    setEditing(e => {
+      if (!e) return e;
+      const subs = e.sub_leader_ids ?? [];
+      const next = subs.includes(id) ? subs.filter(s => s !== id) : [...subs, id];
+      return { ...e, sub_leader_ids: next };
+    });
+  }
+
+  function subLeaderNames(cell: Cell): string {
+    if (!cell.sub_leader_ids?.length) return '';
+    return cell.sub_leader_ids
+      .map(id => leaders.find(l => l.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+  }
+
   return (
     <View style={styles.container}>
       <Header title={t('cells')} />
@@ -83,9 +97,12 @@ export default function CellsScreen() {
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.rowContent} onPress={() => setEditing({ ...item })}>
+            <TouchableOpacity style={styles.rowContent} onPress={() => setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] })}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.meta}>{t('cellLeader')}: {item.users?.name ?? t('none')}</Text>
+              <Text style={styles.meta}>{t('cellLeader')}: {item.leader?.name ?? t('none')}</Text>
+              {!!subLeaderNames(item) && (
+                <Text style={styles.meta}>부셀리더: {subLeaderNames(item)}</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => deleteCell(item.id)}>
               <Text style={styles.delete}>{t('delete')}</Text>
@@ -96,7 +113,7 @@ export default function CellsScreen() {
       />
 
       <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modal}>
+        <ScrollView style={styles.modal}>
           <Text style={styles.modalTitle}>{t('editCell')}</Text>
           <Text style={styles.label}>{t('cellName')}</Text>
           <TextInput style={styles.input} value={editing?.name ?? ''} onChangeText={v => setEditing(e => e ? { ...e, name: v } : e)} />
@@ -105,13 +122,29 @@ export default function CellsScreen() {
             <Picker.Item label={t('none')} value="" />
             {leaders.map(l => <Picker.Item key={l.id} label={l.name} value={l.id} />)}
           </Picker>
+          <Text style={styles.label}>부셀리더</Text>
+          {leaders.map(l => {
+            const active = editing?.sub_leader_ids?.includes(l.id) ?? false;
+            const isLeader = editing?.leader_id === l.id;
+            return (
+              <TouchableOpacity
+                key={l.id}
+                style={[styles.subRow, active && styles.subRowActive, isLeader && styles.subRowDisabled]}
+                onPress={() => !isLeader && toggleSubLeader(l.id)}
+                disabled={isLeader}
+              >
+                <Text style={[styles.subLabel, active && styles.subLabelActive, isLeader && styles.subLabelDisabled]}>{l.name}</Text>
+                <Text style={styles.subCheck}>{active ? '✓' : ''}</Text>
+              </TouchableOpacity>
+            );
+          })}
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveEdit} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? '...' : t('save')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(null)}>
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </Modal>
 
       <Modal visible={adding} animationType="slide" presentationStyle="pageSheet">
@@ -145,9 +178,16 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },
   label: { fontSize: 14, color: '#666', marginTop: 16, marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 16 },
+  subRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 },
+  subRowActive: { borderColor: '#2563EB', backgroundColor: '#EEF2FF' },
+  subRowDisabled: { opacity: 0.3 },
+  subLabel: { fontSize: 15, color: '#333' },
+  subLabelActive: { color: '#2563EB', fontWeight: '600' },
+  subLabelDisabled: { color: '#999' },
+  subCheck: { fontSize: 16, color: '#2563EB' },
   saveBtn: { backgroundColor: '#2563EB', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancelBtn: { alignItems: 'center', marginTop: 16 },
+  cancelBtn: { alignItems: 'center', marginTop: 16, marginBottom: 40 },
   cancelText: { color: '#888', fontSize: 15 },
   disabled: { opacity: 0.5 },
 });
