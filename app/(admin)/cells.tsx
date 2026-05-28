@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
@@ -57,13 +57,19 @@ export default function CellsScreen() {
   }
 
   async function deleteCell(id: string) {
-    Alert.alert(t('deleteCell'), t('deleteConfirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: async () => {
-        await supabase.from('cells').delete().eq('id', id);
-        loadData();
-      }},
-    ]);
+    if (Platform.OS === 'web') {
+      if (!window.confirm(t('deleteConfirm'))) return;
+      await supabase.from('cells').delete().eq('id', id);
+      loadData();
+    } else {
+      Alert.alert(t('deleteCell'), t('deleteConfirm'), [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: async () => {
+          await supabase.from('cells').delete().eq('id', id);
+          loadData();
+        }},
+      ]);
+    }
   }
 
   return (
