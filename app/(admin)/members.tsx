@@ -45,17 +45,23 @@ export default function MembersScreen() {
   const [saving, setSaving] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('cell');
   const [sortAsc, setSortAsc] = useState(true);
+  const [myRoles, setMyRoles] = useState<string[]>([]);
   const { t } = useTranslation();
+
+  const isPastor = myRoles.includes('pastor');
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const [{ data: memberData }, { data: cellData }] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser();
+    const [{ data: memberData }, { data: cellData }, { data: myProfile }] = await Promise.all([
       supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)'),
       supabase.from('cells').select('id, name').order('name'),
+      user ? supabase.from('users').select('roles').eq('id', user.id).single() : Promise.resolve({ data: null }),
     ]);
     setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
+    setMyRoles((myProfile as any)?.roles ?? []);
   }
 
   async function saveEdit() {
@@ -70,7 +76,14 @@ export default function MembersScreen() {
     loadData();
   }
 
+  function canToggleRole(role: string): boolean {
+    if (role === 'pastor' || role === 'admin') return isPastor;
+    if (role === 'cell_leader') return isPastor || myRoles.includes('admin');
+    return true;
+  }
+
   function toggleRole(role: string) {
+    if (!canToggleRole(role)) return;
     setEditing(e => {
       if (!e) return e;
       const has = e.roles.includes(role);
@@ -124,9 +137,10 @@ export default function MembersScreen() {
           <Text style={styles.label}>{t('roles')}</Text>
           {ALL_ROLES.map(role => {
             const active = editing?.roles.includes(role) ?? false;
+            const disabled = !canToggleRole(role);
             return (
-              <TouchableOpacity key={role} style={[styles.roleRow, active && styles.roleRowActive]} onPress={() => toggleRole(role)}>
-                <Text style={[styles.roleLabel, active && styles.roleLabelActive]}>{role}</Text>
+              <TouchableOpacity key={role} style={[styles.roleRow, active && styles.roleRowActive, disabled && styles.roleRowDisabled]} onPress={() => toggleRole(role)} disabled={disabled}>
+                <Text style={[styles.roleLabel, active && styles.roleLabelActive, disabled && styles.roleLabelDisabled]}>{role}</Text>
                 <Text style={styles.roleCheck}>{active ? '✓' : ''}</Text>
               </TouchableOpacity>
             );
@@ -165,8 +179,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, color: '#666', marginTop: 16, marginBottom: 8 },
   roleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 },
   roleRowActive: { borderColor: '#2563EB', backgroundColor: '#EEF2FF' },
+  roleRowDisabled: { backgroundColor: '#F9FAFB', borderColor: '#F3F4F6' },
   roleLabel: { fontSize: 15, color: '#333' },
   roleLabelActive: { color: '#2563EB', fontWeight: '600' },
+  roleLabelDisabled: { color: '#D1D5DB' },
   roleCheck: { fontSize: 16, color: '#2563EB' },
   saveBtn: { backgroundColor: '#2563EB', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
