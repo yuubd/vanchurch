@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 type Stats = { members: number; cells: number; prayers: number; attended: number };
 
@@ -13,6 +14,7 @@ function getLastSunday(): string {
 
 export default function AdminHome() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [adminName, setAdminName] = useState('');
   const [churchName, setChurchName] = useState('');
   const [stats, setStats] = useState<Stats>({ members: 0, cells: 0, prayers: 0, attended: 0 });
@@ -51,9 +53,9 @@ export default function AdminHome() {
   }
 
   const quickMenus = [
-    { label: '기도제목', sub: `이번 주 ${stats.prayers}건`, route: '/(admin)/prayers' as const },
-    { label: '성도 관리', sub: `총 ${stats.members}명`, route: '/(admin)/members' as const },
-    { label: '셀 관리', sub: `${stats.cells}개 셀 운영 중`, route: '/(admin)/cells' as const },
+    { label: t('prayerRequests'), sub: t('thisWeekPrayers').replace('%', String(stats.prayers)), route: '/(admin)/prayers' as const },
+    { label: t('memberManagement'), sub: t('totalMembers').replace('%', String(stats.members)), route: '/(admin)/members' as const },
+    { label: t('cellManagement'), sub: t('cellsRunning').replace('%', String(stats.cells)), route: '/(admin)/cells' as const },
   ];
 
   return (
@@ -65,25 +67,25 @@ export default function AdminHome() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.greeting}>안녕하세요, {adminName}님 👋</Text>
+      <Text style={styles.greeting}>{t('greeting')}, {adminName}{t('greetingSuffix')}</Text>
       <Text style={styles.church}>{churchName}</Text>
 
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
           <Text style={[styles.statNum, { color: '#2563EB' }]}>{stats.attended}/{stats.members}</Text>
-          <Text style={styles.statLabel}>출석</Text>
+          <Text style={styles.statLabel}>{t('attendance')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}>
           <Text style={[styles.statNum, { color: '#16A34A' }]}>{stats.cells}</Text>
-          <Text style={styles.statLabel}>셀</Text>
+          <Text style={styles.statLabel}>{t('cells')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: '#FFF7ED' }]}>
           <Text style={[styles.statNum, { color: '#EA580C' }]}>{stats.prayers}</Text>
-          <Text style={styles.statLabel}>기도제목</Text>
+          <Text style={styles.statLabel}>{t('prayerRequests')}</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>빠른 메뉴</Text>
+      <Text style={styles.sectionLabel}>{t('quickMenu')}</Text>
 
       {quickMenus.map(item => (
         <TouchableOpacity key={item.label} style={styles.menuCard} onPress={() => router.push(item.route)}>

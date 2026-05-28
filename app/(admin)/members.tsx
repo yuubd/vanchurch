@@ -13,7 +13,6 @@ const ROLE_PRIORITY: Record<string, number> = { pastor: 0, admin: 1, cell_leader
 
 type SortMode = 'name' | 'cell' | 'role';
 const SORT_MODES: SortMode[] = ['cell', 'name', 'role'];
-const SORT_LABELS: Record<SortMode, string> = { name: '이름순', cell: '셀순', role: '권한순' };
 
 function sortMembers(list: Member[], mode: SortMode, asc: boolean): Member[] {
   const dir = asc ? 1 : -1;
@@ -96,7 +95,7 @@ export default function MembersScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>{t('members')}</Text>
         <TouchableOpacity onPress={cycleSort}>
-          <Text style={styles.sortBtnText}>{SORT_LABELS[sortMode]} {sortAsc ? '↑' : '↓'}</Text>
+          <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
         </TouchableOpacity>
       </View>
       <FlatList
