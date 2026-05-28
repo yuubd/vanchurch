@@ -10,6 +10,20 @@ type Member = { id: string; name: string; roles: string[]; cell_id: string | nul
 
 const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
 
+const ROLE_PRIORITY: Record<string, number> = { pastor: 0, admin: 1, cell_leader: 2, member: 3 };
+
+function sortMembers(list: Member[]): Member[] {
+  return [...list].sort((a, b) => {
+    const cellA = a.cells?.name ?? '￿';
+    const cellB = b.cells?.name ?? '￿';
+    if (cellA !== cellB) return cellA.localeCompare(cellB);
+    const roleA = Math.min(...(a.roles.map(r => ROLE_PRIORITY[r] ?? 99)));
+    const roleB = Math.min(...(b.roles.map(r => ROLE_PRIORITY[r] ?? 99)));
+    if (roleA !== roleB) return roleA - roleB;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 const ROLE_STYLE: Record<string, { backgroundColor: string; color: string }> = {
   admin:       { backgroundColor: '#FEF3C7', color: '#92400E' },
   pastor:      { backgroundColor: '#DCFCE7', color: '#166534' },
@@ -28,10 +42,10 @@ export default function MembersScreen() {
 
   async function loadData() {
     const [{ data: memberData }, { data: cellData }] = await Promise.all([
-      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)').order('name'),
+      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)'),
       supabase.from('cells').select('id, name').order('name'),
     ]);
-    setMembers((memberData ?? []) as any);
+    setMembers(sortMembers((memberData ?? []) as any));
     setCells(cellData ?? []);
   }
 
