@@ -14,6 +14,8 @@ export default function AdminLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const [allowed, setAllowed] = useState(false);
+  const [isPastor, setIsPastor] = useState(false);
+  const [canSeeFeedback, setCanSeeFeedback] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -21,6 +23,8 @@ export default function AdminLayout() {
       supabase.from('users').select('roles').eq('id', user.id).single().then(({ data }) => {
         const roles: string[] = data?.roles ?? [];
         if (roles.includes('admin') || roles.includes('pastor')) {
+          setIsPastor(roles.includes('pastor'));
+          setCanSeeFeedback(user.phone?.replace(/\D/g, '') === '11000000010');
           setAllowed(true);
         } else if (roles.includes('cell_leader')) {
           router.replace('/(leader)');
@@ -54,9 +58,10 @@ export default function AdminLayout() {
       }}
     >
       <Tabs.Screen name="index"   options={{ title: t('home'),          tabBarIcon: ({ focused }) => <TabIcon name="home"    focused={focused} /> }} />
-      <Tabs.Screen name="prayers" options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"   focused={focused} /> }} />
+      <Tabs.Screen name="prayers" options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"   focused={focused} />, href: isPastor ? undefined : null }} />
       <Tabs.Screen name="members" options={{ title: t('members'),        tabBarIcon: ({ focused }) => <TabIcon name="people"  focused={focused} /> }} />
       <Tabs.Screen name="cells"   options={{ title: t('cells'),          tabBarIcon: ({ focused }) => <TabIcon name="grid"    focused={focused} /> }} />
+      <Tabs.Screen name="feedback" options={{ title: t('feedback'), tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-ellipses" focused={focused} />, href: canSeeFeedback ? undefined : null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person"  focused={focused} /> }} />
       <Tabs.Screen name="setup"   options={{ href: null }} />
     </Tabs>

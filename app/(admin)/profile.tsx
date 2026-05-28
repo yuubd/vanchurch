@@ -4,7 +4,15 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 
-type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null };
+type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
+
+function formatPhone(raw: string | null): string {
+  if (!raw) return '—';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1'))
+    return `+1 ${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  return raw;
+}
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   admin:       { bg: '#FEF3C7', text: '#92400E' },
@@ -27,7 +35,7 @@ export default function ProfileScreen() {
       .select('name, roles, cells!users_cell_id_fkey(name), churches(name)')
       .eq('id', user!.id)
       .single();
-    setProfile(data as any);
+    setProfile({ ...(data as any), phone: user?.phone ?? null });
   }
 
   async function logout() {
@@ -40,9 +48,15 @@ export default function ProfileScreen() {
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
       {profile && (
         <View>
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('name')}</Text>
-            <Text style={styles.value}>{profile.name}</Text>
+          <View style={[styles.section, styles.row]}>
+            <View style={styles.half}>
+              <Text style={styles.label}>{t('name')}</Text>
+              <Text style={styles.value}>{profile.name}</Text>
+            </View>
+            <View style={styles.half}>
+              <Text style={styles.label}>{t('phoneNumber')}</Text>
+              <Text style={styles.value}>{formatPhone(profile.phone)}</Text>
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -91,6 +105,8 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingTop: 60 },
   pageTitle: { fontSize: 26, fontWeight: '800', color: '#111827', letterSpacing: -0.5, marginBottom: 28 },
   section: { paddingVertical: 16, borderBottomWidth: 1, borderColor: '#f0f0f0' },
+  row: { flexDirection: 'row', gap: 16 },
+  half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
