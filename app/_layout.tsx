@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { LanguageProvider } from '../lib/i18n';
+import { INVITE_TOKEN_KEY, processInvite } from './join/[token]';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -26,9 +28,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth) {
+    const inJoin = segments[0] === 'join';
+    if (!session && !inAuth && !inJoin) {
       router.replace('/(auth)/login');
-    } else if (session && inAuth) {
+    } else if (session && (inAuth || inJoin)) {
       redirectByRole();
     }
   }, [session, loading]);
@@ -46,6 +49,13 @@ export default function RootLayout() {
     // Incomplete onboarding: needs name
     if (!data.name) {
       router.replace('/(auth)/profile-setup');
+      return;
+    }
+
+    // Check for pending invite token (user tapped a join link before/after login)
+    const pendingToken = await AsyncStorage.getItem(INVITE_TOKEN_KEY);
+    if (pendingToken) {
+      await processInvite(session!.user.id, pendingToken, router);
       return;
     }
 
