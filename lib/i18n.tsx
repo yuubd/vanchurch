@@ -84,6 +84,10 @@ const strings = {
     korean: '한국어',
     english: 'English',
     phoneNumber: '전화번호',
+    // Join requests
+    pendingApprovals: '가입 요청',
+    approve: '승인',
+    reject: '거절',
     // Feedback
     feedback: '피드백',
     feedbackPlaceholder: '의견이나 건의사항을 남겨주세요...',
@@ -176,6 +180,10 @@ const strings = {
     korean: '한국어',
     english: 'English',
     phoneNumber: 'Phone number',
+    // Join requests
+    pendingApprovals: 'Join requests',
+    approve: 'Approve',
+    reject: 'Reject',
     // Feedback
     feedback: 'Feedback',
     feedbackPlaceholder: 'Share your thoughts or suggestions...',

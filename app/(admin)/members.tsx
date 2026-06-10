@@ -6,6 +6,7 @@ import { useTranslation } from '../../lib/i18n';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
+type JoinRequest = { id: string; user_id: string; created_at: string; users: { name: string; phone?: string } | null };
 
 const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
 
@@ -46,6 +47,8 @@ export default function MembersScreen() {
   const [sortMode, setSortMode] = useState<SortMode>('cell');
   const [sortAsc, setSortAsc] = useState(true);
   const [myRoles, setMyRoles] = useState<string[]>([]);
+  const [myChurchId, setMyChurchId] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const { t } = useTranslation();
 
   const isPastor = myRoles.includes('pastor');
@@ -54,14 +57,45 @@ export default function MembersScreen() {
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
-    const [{ data: memberData }, { data: cellData }, { data: myProfile }] = await Promise.all([
+    const { data: myProfile } = user
+      ? await supabase.from('users').select('roles, church_id').eq('id', user.id).single()
+      : { data: null };
+
+    const churchId = (myProfile as any)?.church_id ?? null;
+    setMyRoles((myProfile as any)?.roles ?? []);
+    setMyChurchId(churchId);
+
+    const queries: Promise<any>[] = [
       supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)'),
       supabase.from('cells').select('id, name').order('name'),
-      user ? supabase.from('users').select('roles').eq('id', user.id).single() : Promise.resolve({ data: null }),
-    ]);
+    ];
+    if (churchId) {
+      queries.push(
+        supabase.from('join_requests')
+          .select('id, user_id, created_at, users!join_requests_user_id_fkey(name)')
+          .eq('church_id', churchId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true })
+      );
+    }
+
+    const [{ data: memberData }, { data: cellData }, joinRes] = await Promise.all(queries);
     setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
-    setMyRoles((myProfile as any)?.roles ?? []);
+    setJoinRequests((joinRes?.data ?? []) as any);
+  }
+
+  async function approveRequest(req: JoinRequest) {
+    await Promise.all([
+      supabase.from('join_requests').update({ status: 'approved' }).eq('id', req.id),
+      supabase.from('users').update({ church_id: myChurchId, roles: ['member'] }).eq('id', req.user_id),
+    ]);
+    loadData();
+  }
+
+  async function rejectRequest(req: JoinRequest) {
+    await supabase.from('join_requests').update({ status: 'rejected' }).eq('id', req.id);
+    loadData();
   }
 
   async function saveEdit() {
@@ -111,6 +145,28 @@ export default function MembersScreen() {
           <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
         </TouchableOpacity>
       </View>
+      {joinRequests.length > 0 && (
+        <View style={styles.pendingSection}>
+          <Text style={styles.pendingHeader}>{t('pendingApprovals')} ({joinRequests.length})</Text>
+          {joinRequests.map(req => (
+            <View key={req.id} style={styles.pendingRow}>
+              <View style={styles.pendingInfo}>
+                <Text style={styles.pendingName}>{req.users?.name ?? '—'}</Text>
+                <Text style={styles.pendingDate}>{new Date(req.created_at).toLocaleDateString()}</Text>
+              </View>
+              <View style={styles.pendingBtns}>
+                <TouchableOpacity style={styles.rejectBtn} onPress={() => rejectRequest(req)}>
+                  <Text style={styles.rejectText}>{t('reject')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.approveBtn} onPress={() => approveRequest(req)}>
+                  <Text style={styles.approveText}>{t('approve')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
       <FlatList
         data={sorted}
         keyExtractor={item => item.id}
@@ -174,6 +230,17 @@ const styles = StyleSheet.create({
   roleBadge: { fontSize: 10, fontWeight: '600', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20, overflow: 'hidden' },
   editLabel: { fontSize: 13, color: '#2563EB' },
   empty: { textAlign: 'center', marginTop: 60, color: '#aaa', fontSize: 15 },
+  pendingSection: { backgroundColor: '#FFFBEB', borderBottomWidth: 1, borderColor: '#FDE68A', paddingHorizontal: 16, paddingVertical: 12 },
+  pendingHeader: { fontSize: 13, fontWeight: '700', color: '#92400E', marginBottom: 10 },
+  pendingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  pendingInfo: { flex: 1 },
+  pendingName: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  pendingDate: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  pendingBtns: { flexDirection: 'row', gap: 8 },
+  rejectBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  rejectText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+  approveBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8, backgroundColor: '#2563EB' },
+  approveText: { fontSize: 13, color: '#fff', fontWeight: '600' },
   modal: { flex: 1, padding: 24, paddingTop: 48 },
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },
   label: { fontSize: 14, color: '#666', marginTop: 16, marginBottom: 8 },
