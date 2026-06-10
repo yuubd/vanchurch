@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 
-type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
+type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
 
 function formatPhone(raw: string | null): string {
   if (!raw) return '—';
@@ -23,6 +24,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [copied, setCopied] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
@@ -32,10 +34,24 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase
       .from('users')
-      .select('name, roles, cells!users_cell_id_fkey(name), churches(name)')
+      .select('name, roles, cells!users_cell_id_fkey(name), churches(name, invite_token)')
       .eq('id', user!.id)
       .single();
     setProfile({ ...(data as any), phone: user?.phone ?? null });
+  }
+
+  function inviteLink() {
+    return `https://vanchurch.vercel.app/join/${profile?.churches?.invite_token}`;
+  }
+
+  async function copyLink() {
+    await Clipboard.setStringAsync(inviteLink());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function shareLink() {
+    await Share.share({ message: inviteLink(), url: inviteLink() });
   }
 
   async function logout() {
@@ -63,6 +79,23 @@ export default function ProfileScreen() {
             <Text style={styles.label}>{t('churchName')}</Text>
             <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
           </View>
+
+          {profile.churches?.invite_token && (
+            <View style={styles.section}>
+              <Text style={styles.label}>{t('inviteMembers')}</Text>
+              <View style={styles.linkBox}>
+                <Text style={styles.linkText} numberOfLines={1}>{inviteLink()}</Text>
+              </View>
+              <View style={styles.linkBtns}>
+                <TouchableOpacity style={styles.linkBtn} onPress={copyLink}>
+                  <Text style={styles.linkBtnText}>{copied ? t('copied') : t('copyLink')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.linkBtn, styles.shareBtn]} onPress={shareLink}>
+                  <Text style={styles.shareBtnText}>{t('share')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.label}>{t('myRoles')}</Text>
@@ -116,6 +149,13 @@ const styles = StyleSheet.create({
   langBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   langBtnText: { fontSize: 14, color: '#666', fontWeight: '500' },
   langBtnTextActive: { color: '#fff', fontWeight: '600' },
+  linkBox: { backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, marginBottom: 10 },
+  linkText: { fontSize: 13, color: '#6B7280', fontFamily: 'monospace' },
+  linkBtns: { flexDirection: 'row', gap: 10 },
+  linkBtn: { flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 11, alignItems: 'center' },
+  linkBtnText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
+  shareBtn: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  shareBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });
