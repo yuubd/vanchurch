@@ -61,7 +61,7 @@ export default function RootLayout() {
 
     // Incomplete onboarding: needs church
     if (!data.church_id) {
-      router.replace('/(auth)/find-community');
+      router.replace('/(auth)/onboarding');
       return;
     }
 

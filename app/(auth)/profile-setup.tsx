@@ -18,7 +18,7 @@ export default function ProfileSetup() {
     if (error) {
       Alert.alert('오류', error.message);
     } else {
-      router.replace('/(auth)/find-community');
+      router.replace('/(auth)/onboarding');
     }
   }
 
