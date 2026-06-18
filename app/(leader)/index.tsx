@@ -14,6 +14,8 @@ type PrayerRequest = {
   userName: string;
 };
 
+type CellMember = { id: string; name: string };
+
 function getWeekRange(offset: number, lang: string): { start: string; end: string; label: string } {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
   const now = new Date();
@@ -36,8 +38,10 @@ export default function LeaderPrayers() {
   const [cellId, setCellId] = useState('');
   const [myId, setMyId] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
+  const [cellMembers, setCellMembers] = useState<CellMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [draft, setDraft] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState('');
   const [loading, setLoading] = useState(false);
 
   const week = getWeekRange(weekOffset, lang);
@@ -54,13 +58,18 @@ export default function LeaderPrayers() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setMyId(user.id);
+    setSelectedMemberId(user.id);
 
     const { data: me } = await supabase.from('users').select('cell_id').eq('id', user.id).single();
     if (!me?.cell_id) return;
     setCellId(me.cell_id);
 
-    const { data: cell } = await supabase.from('cells').select('name').eq('id', me.cell_id).single();
+    const [{ data: cell }, { data: members }] = await Promise.all([
+      supabase.from('cells').select('name').eq('id', me.cell_id).single(),
+      supabase.from('users').select('id, name').eq('cell_id', me.cell_id).order('name'),
+    ]);
     setCellName(cell?.name ?? '');
+    setCellMembers((members ?? []) as CellMember[]);
   }
 
   async function loadRequests(cId: string, userId: string) {
@@ -105,10 +114,13 @@ export default function LeaderPrayers() {
   }
 
   async function submit() {
-    if (!draft.trim()) return;
+    if (!draft.trim() || !selectedMemberId) return;
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('prayer_requests').insert({ user_id: user?.id, body: draft.trim() });
+    const { error } = await supabase.from('prayer_requests').insert({
+      user_id: selectedMemberId,
+      cell_id: cellId,
+      body: draft.trim(),
+    });
     setLoading(false);
     if (error) { Alert.alert('오류', error.message); return; }
     setDraft('');
@@ -159,7 +171,7 @@ export default function LeaderPrayers() {
         ListEmptyComponent={<Text style={styles.empty}>{t('noPrayersAll')}</Text>}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => { setSelectedMemberId(myId); setDraft(''); setModalVisible(true); }}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
@@ -171,6 +183,19 @@ export default function LeaderPrayers() {
               <Ionicons name="close" size={24} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
+          <Text style={styles.memberLabel}>{t('prayerFor')}</Text>
+          <View style={styles.memberList}>
+            {cellMembers.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.memberChip, selectedMemberId === m.id && styles.memberChipActive]}
+                onPress={() => setSelectedMemberId(m.id)}
+              >
+                <Text style={[styles.memberChipText, selectedMemberId === m.id && styles.memberChipTextActive]}>{m.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TextInput
             style={styles.input}
             placeholder={t('sharePrayer')}
@@ -219,7 +244,13 @@ const styles = StyleSheet.create({
   modal: { flex: 1, padding: 24, paddingTop: 32 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  input: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 16, fontSize: 16, height: 180, lineHeight: 24, backgroundColor: '#F9FAFB' },
+  memberLabel: { fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 10 },
+  memberList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  memberChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
+  memberChipActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  memberChipText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  memberChipTextActive: { color: '#fff', fontWeight: '700' },
+  input: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 16, fontSize: 16, height: 160, lineHeight: 24, backgroundColor: '#F9FAFB' },
   charCount: { fontSize: 12, color: '#9CA3AF', textAlign: 'right', marginTop: 6, marginBottom: 16 },
   submitBtn: { backgroundColor: '#2563EB', borderRadius: 14, padding: 18, alignItems: 'center' },
   submitDisabled: { opacity: 0.4 },
