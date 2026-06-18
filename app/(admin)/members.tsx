@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -49,6 +49,11 @@ export default function MembersScreen() {
   const [myRoles, setMyRoles] = useState<string[]>([]);
   const [myChurchId, setMyChurchId] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
+  const [addError, setAddError] = useState('');
   const { t } = useTranslation();
 
   const isPastor = myRoles.includes('pastor');
@@ -98,6 +103,35 @@ export default function MembersScreen() {
     loadData();
   }
 
+  function toE164(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
+    return '+1' + digits;
+  }
+
+  async function addMember() {
+    if (!newName.trim() || newPhone.replace(/\D/g, '').length < 10) return;
+    if (!myChurchId) return;
+    setAddingMember(true);
+    setAddError('');
+    const phone = toE164(newPhone);
+    const { error } = await supabase.from('users').insert({
+      name: newName.trim(),
+      phone: phone.replace('+', ''),
+      church_id: myChurchId,
+      roles: ['member'],
+    });
+    setAddingMember(false);
+    if (error) {
+      setAddError(error.message.includes('unique') ? '이미 등록된 번호입니다' : error.message);
+      return;
+    }
+    setShowAddMember(false);
+    setNewName('');
+    setNewPhone('');
+    loadData();
+  }
+
   async function saveEdit() {
     if (!editing) return;
     setSaving(true);
@@ -141,9 +175,14 @@ export default function MembersScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>{t('members')}</Text>
-        <TouchableOpacity onPress={cycleSort}>
-          <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={cycleSort}>
+            <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
+            <Text style={styles.addBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {joinRequests.length > 0 && (
         <View style={styles.pendingSection}>
@@ -187,6 +226,40 @@ export default function MembersScreen() {
         ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
       />
 
+      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)}>
+        <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Text style={styles.modalTitle}>{t('addMember')}</Text>
+          <Text style={styles.label}>{t('name')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="홍길동"
+            value={newName}
+            onChangeText={setNewName}
+            autoFocus
+          />
+          <Text style={styles.label}>{t('phoneNumber')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="604-000-0000"
+            keyboardType="phone-pad"
+            value={newPhone}
+            onChangeText={setNewPhone}
+          />
+          <Text style={styles.addHint}>{t('addMemberHint')}</Text>
+          {!!addError && <Text style={styles.addError}>{addError}</Text>}
+          <TouchableOpacity
+            style={[styles.saveBtn, (!newName.trim() || newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+            onPress={addMember}
+            disabled={!newName.trim() || newPhone.replace(/\D/g, '').length < 10 || addingMember}
+          >
+            <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>{editing?.name}</Text>
@@ -222,7 +295,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#eee' },
   headerTitle: { fontSize: 20, fontWeight: '700' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sortBtnText: { fontSize: 13, color: '#9CA3AF' },
+  addBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
+  addBtnText: { fontSize: 22, color: '#fff', lineHeight: 26 },
+  textInput: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, fontSize: 16, color: '#111827', backgroundColor: '#F9FAFB', marginBottom: 16 },
+  addHint: { fontSize: 13, color: '#9CA3AF', marginBottom: 8, lineHeight: 20 },
+  addError: { fontSize: 13, color: '#DC2626', marginBottom: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
   name: { fontSize: 16, fontWeight: '500' },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 4 },

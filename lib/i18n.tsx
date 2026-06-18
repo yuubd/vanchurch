@@ -91,6 +91,9 @@ const strings = {
     inviteMembers: '멤버 초대',
     copyLink: '링크 복사',
     copied: '복사됨 ✓',
+    addMember: '멤버 추가',
+    addMemberHint: '이 번호로 로그인하면 공동체 가입이 자동으로 완료됩니다',
+    add: '추가',
     // Feedback
     feedback: '피드백',
     feedbackPlaceholder: '의견이나 건의사항을 남겨주세요...',
@@ -190,6 +193,9 @@ const strings = {
     inviteMembers: 'Invite members',
     copyLink: 'Copy link',
     copied: 'Copied ✓',
+    addMember: 'Add member',
+    addMemberHint: 'When they log in with this number, they\'ll be added to your community automatically',
+    add: 'Add',
     // Feedback
     feedback: 'Feedback',
     feedbackPlaceholder: 'Share your thoughts or suggestions...',
