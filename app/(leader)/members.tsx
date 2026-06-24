@@ -13,7 +13,7 @@ function getDateLabel(date: Date, lang: string) {
 
 function getThisSunday(offset = 0) {
   const today = new Date();
-  const diff = today.getDay() === 0 ? 0 : 7 - today.getDay();
+  const diff = today.getDay() === 0 ? 0 : -today.getDay(); // back to most recent Sunday
   const d = new Date(today);
   d.setDate(today.getDate() + diff + offset * 7);
   d.setHours(0, 0, 0, 0);

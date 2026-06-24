@@ -71,7 +71,7 @@ export default function MembersScreen() {
     setMyChurchId(churchId);
 
     const queries: Promise<any>[] = [
-      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)'),
+      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)').eq('church_id', churchId ?? ''),
       supabase.from('cells').select('id, name').order('name'),
     ];
     if (churchId) {
@@ -91,15 +91,17 @@ export default function MembersScreen() {
   }
 
   async function approveRequest(req: JoinRequest) {
-    await Promise.all([
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
       supabase.from('join_requests').update({ status: 'approved' }).eq('id', req.id),
       supabase.from('users').update({ church_id: myChurchId, roles: ['member'] }).eq('id', req.user_id),
     ]);
+    if (e1 || e2) { Alert.alert('오류', (e1 ?? e2)!.message); return; }
     loadData();
   }
 
   async function rejectRequest(req: JoinRequest) {
-    await supabase.from('join_requests').update({ status: 'rejected' }).eq('id', req.id);
+    const { error } = await supabase.from('join_requests').update({ status: 'rejected' }).eq('id', req.id);
+    if (error) { Alert.alert('오류', error.message); return; }
     loadData();
   }
 
@@ -174,15 +176,15 @@ export default function MembersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>{t('members')}</Text>
-        <View style={styles.headerRight}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>{t('members')}</Text>
           <TouchableOpacity onPress={cycleSort}>
             <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
-            <Text style={styles.addBtnText}>+</Text>
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
+          <Text style={styles.addBtnText}>+</Text>
+        </TouchableOpacity>
       </View>
       {joinRequests.length > 0 && (
         <View style={styles.pendingSection}>
@@ -232,7 +234,7 @@ export default function MembersScreen() {
           <Text style={styles.label}>{t('name')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="홍길동"
+            placeholder={t('namePlaceholder')}
             value={newName}
             onChangeText={setNewName}
             autoFocus
@@ -293,7 +295,8 @@ export default function MembersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#eee' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#eee' },
+  headerLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   headerTitle: { fontSize: 20, fontWeight: '700' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sortBtnText: { fontSize: 13, color: '#9CA3AF' },

@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useRef, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import Turnstile from '../../lib/Turnstile';
+import { useTranslation } from '../../lib/i18n';
 
 function toE164(raw: string): string {
   const digits = raw.replace(/\D/g, '');
@@ -19,12 +21,24 @@ function formatDisplay(digits: string, deleting: boolean): string {
 type Step = 'phone' | 'otp';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaError, setCaptchaError] = useState(false);
   const otpRef = useRef<TextInput>(null);
+
+  const handleCaptchaToken = useCallback((token: string) => {
+    setCaptchaToken(token);
+    setCaptchaError(false);
+  }, []);
+
+  const handleCaptchaError = useCallback(() => {
+    setCaptchaError(true);
+  }, []);
 
   function handlePhoneChange(text: string) {
     const digits = text.replace(/\D/g, '').slice(0, 10);
@@ -36,12 +50,14 @@ export default function LoginScreen() {
   async function sendOtp() {
     const e164 = toE164(phone);
     if (phone.replace(/\D/g, '').length < 10) {
-      setError('전화번호를 입력해주세요');
+      setError(t('phoneRequired'));
       return;
     }
+    if (!captchaToken) { setError('보안 확인을 기다리는 중입니다. 잠시 후 다시 시도해주세요'); return; }
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164 });
+    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: { captchaToken } });
+    setCaptchaToken('');
     setLoading(false);
     if (err) { setError(err.message); return; }
     setStep('otp');
@@ -50,12 +66,12 @@ export default function LoginScreen() {
 
   async function verifyOtp() {
     const e164 = toE164(phone);
-    if (otp.length < 6) { setError('6자리 코드를 입력해주세요'); return; }
+    if (otp.length < 6) { setError(t('otpRequired')); return; }
     setLoading(true);
     setError('');
     const { error: err } = await supabase.auth.verifyOtp({ phone: e164, token: otp, type: 'sms' });
     setLoading(false);
-    if (err) { setError('잘못된 코드입니다. 다시 확인해주세요'); return; }
+    if (err) { setError(t('otpInvalid')); return; }
     // _layout.tsx handles redirect via onAuthStateChange
   }
 
@@ -89,7 +105,7 @@ export default function LoginScreen() {
               onPress={sendOtp}
               disabled={phone.replace(/\D/g, '').length < 10 || loading}
             >
-              <Text style={styles.btnText}>{loading ? '...' : '인증번호 받기'}</Text>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>인증번호 받기</Text>}
             </TouchableOpacity>
           </View>
         ) : (
@@ -115,7 +131,7 @@ export default function LoginScreen() {
               onPress={verifyOtp}
               disabled={otp.length < 6 || loading}
             >
-              <Text style={styles.btnText}>{loading ? '...' : '확인'}</Text>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>확인</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={styles.resend} onPress={sendOtp} disabled={loading}>
               <Text style={styles.resendText}>코드 재전송</Text>
@@ -125,6 +141,7 @@ export default function LoginScreen() {
 
         {!!error && <Text style={styles.error}>{error}</Text>}
       </View>
+      <Turnstile onToken={handleCaptchaToken} onError={handleCaptchaError} />
     </KeyboardAvoidingView>
   );
 }

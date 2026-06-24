@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
@@ -20,9 +20,14 @@ export default function CellsScreen() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
+    const churchId = me?.church_id ?? '';
+
     const [{ data: cellData }, { data: leaderData }] = await Promise.all([
-      supabase.from('cells').select('id, name, leader_id, sub_leader_ids, leader:users!cells_leader_id_fkey(name)').order('name'),
-      supabase.from('users').select('id, name').overlaps('roles', ['cell_leader', 'admin', 'pastor']).order('name'),
+      supabase.from('cells').select('id, name, leader_id, sub_leader_ids, leader:users!cells_leader_id_fkey(name)').eq('church_id', churchId).order('name'),
+      supabase.from('users').select('id, name').eq('church_id', churchId).overlaps('roles', ['cell_leader', 'admin', 'pastor']).order('name'),
     ]);
     setCells((cellData ?? []) as any);
     setLeaders(leaderData ?? []);
@@ -44,7 +49,8 @@ export default function CellsScreen() {
     if (!newName.trim()) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: me } = await supabase.from('users').select('church_id').eq('id', user!.id).single();
+    if (!user) { setSaving(false); return; }
+    const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     const { error } = await supabase.from('cells').insert({ name: newName.trim(), church_id: me?.church_id });
     setSaving(false);
     if (error) { Alert.alert('Error', error.message); return; }
@@ -103,7 +109,7 @@ export default function CellsScreen() {
         ListEmptyComponent={<Text style={styles.empty}>{t('noCells')}</Text>}
       />
 
-      <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={!!editing} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditing(null)}>
         <ScrollView style={styles.modal}>
           <Text style={styles.modalTitle}>{t('editCell')}</Text>
           <Text style={styles.label}>{t('cellName')}</Text>

@@ -34,7 +34,7 @@ export default function RootLayout() {
     } else if (session && (inAuth || inJoin)) {
       redirectByRole();
     }
-  }, [session, loading]);
+  }, [session, loading, segments]);
 
   async function redirectByRole() {
     const { data } = await supabase
@@ -43,8 +43,10 @@ export default function RootLayout() {
       .eq('id', session?.user.id)
       .single();
 
-    // No profile row yet (edge case — trigger should have created it)
-    if (!data) return;
+    if (!data) {
+      router.replace('/(auth)/login');
+      return;
+    }
 
     // Incomplete onboarding: needs name
     if (!data.name) {

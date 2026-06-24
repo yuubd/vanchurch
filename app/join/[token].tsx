@@ -57,7 +57,11 @@ export async function processInvite(userId: string, token: string, router: Retur
 
   if (profile?.church_id === church.id) {
     await AsyncStorage.removeItem(INVITE_TOKEN_KEY);
-    router.replace('/(auth)/welcome');
+    const { data: roleData } = await supabase.from('users').select('roles').eq('id', userId).single();
+    const roles: string[] = roleData?.roles ?? ['member'];
+    if (roles.includes('admin') || roles.includes('pastor')) router.replace('/(admin)');
+    else if (roles.includes('cell_leader')) router.replace('/(leader)');
+    else router.replace('/(member)');
     return;
   }
 

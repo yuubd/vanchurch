@@ -106,6 +106,13 @@ const strings = {
     myRoles: '내 역할',
     myCell: '내 셀',
     churchName: '교회',
+    phoneRequired: '전화번호를 입력해주세요',
+    otpRequired: '6자리 코드를 입력해주세요',
+    otpInvalid: '잘못된 코드입니다. 다시 확인해주세요',
+    pendingTitle: '가입 요청을 보냈어요',
+    pendingSub: '관리자가 승인하면\n바로 입장할 수 있어요',
+    pendingHint: '승인을 기다리는 중입니다...',
+    namePlaceholder: '홍길동',
   },
   en: {
     // Nav
@@ -209,6 +216,13 @@ const strings = {
     myRoles: 'My Roles',
     myCell: 'My Cell',
     churchName: 'Church',
+    phoneRequired: 'Please enter your phone number',
+    otpRequired: 'Please enter the 6-digit code',
+    otpInvalid: 'Invalid code. Please try again',
+    pendingTitle: 'Request sent!',
+    pendingSub: 'Once approved by an admin\nyou\'ll be able to join right away',
+    pendingHint: 'Waiting for approval...',
+    namePlaceholder: 'John Doe',
   },
 };
 

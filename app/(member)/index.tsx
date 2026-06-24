@@ -6,7 +6,7 @@ import { useTranslation } from '../../lib/i18n';
 type Prayer = { id: string; body: string; created_at: string; prayCount: number };
 
 export default function MemberHome() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [name, setName] = useState('');
   const [churchCell, setChurchCell] = useState('');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
@@ -29,14 +29,16 @@ export default function MemberHome() {
     const cell = (data as any)?.cells?.name ?? '';
     setChurchCell([church, cell].filter(Boolean).join(' · '));
 
-    const [{ data: prayerData }, { data: allPrays }] = await Promise.all([
-      supabase.from('prayer_requests')
-        .select('id, body, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-      supabase.from('prayer_prays').select('prayer_id'),
-    ]);
+    const { data: prayerData } = await supabase.from('prayer_requests')
+      .select('id, body, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const prayerIds = (prayerData ?? []).map(p => p.id);
+    const { data: allPrays } = prayerIds.length
+      ? await supabase.from('prayer_prays').select('prayer_id').in('prayer_id', prayerIds)
+      : { data: [] };
 
     const prayCountMap: Record<string, number> = {};
     (allPrays ?? []).forEach(p => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
@@ -95,7 +97,7 @@ export default function MemberHome() {
           <View style={styles.card}>
             <Text style={styles.body}>{item.body}</Text>
             <View style={styles.cardFooter}>
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(t('greeting') === 'Hello' ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' })}</Text>
+              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' })}</Text>
               {item.prayCount > 0 && (
                 <Text style={styles.prayedBadge}>🙏 {item.prayCount}{t('prayedCount')}</Text>
               )}

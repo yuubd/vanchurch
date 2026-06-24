@@ -15,7 +15,7 @@ function getLastSunday(): string {
 
 export default function AdminHome() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [adminName, setAdminName] = useState('');
   const [churchName, setChurchName] = useState('');
   const [stats, setStats] = useState<Stats>({ members: 0, cells: 0, attended: 0 });
@@ -43,16 +43,26 @@ export default function AdminHome() {
 
     const churchId = (profile as any)?.church_id;
 
-    const [{ count: memberCount }, { count: cellCount }, { data: attendanceData }, { data: prayerData }, { data: allPrays }] = await Promise.all([
+    const [{ count: memberCount }, { data: churchCells }, { data: prayerData }] = await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('church_id', churchId ?? ''),
-      supabase.from('cells').select('id', { count: 'exact', head: true }).eq('church_id', churchId ?? ''),
-      supabase.from('attendance_records').select('present').eq('meeting_date', getLastSunday()),
+      supabase.from('cells').select('id').eq('church_id', churchId ?? ''),
       supabase.from('prayer_requests').select('id, body, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-      supabase.from('prayer_prays').select('prayer_id'),
     ]);
 
+    const cellIds = (churchCells ?? []).map(c => c.id);
+    const cellCount = cellIds.length;
+
+    const { data: attendanceData } = cellIds.length
+      ? await supabase.from('attendance_records').select('present').eq('meeting_date', getLastSunday()).in('cell_id', cellIds)
+      : { data: [] };
+
+    const prayerIds = (prayerData ?? []).map((p: any) => p.id);
+    const { data: allPrays } = prayerIds.length
+      ? await supabase.from('prayer_prays').select('prayer_id').in('prayer_id', prayerIds)
+      : { data: [] };
+
     const attended = (attendanceData ?? []).filter(r => r.present).length;
-    setStats({ members: memberCount ?? 0, cells: cellCount ?? 0, attended });
+    setStats({ members: memberCount ?? 0, cells: cellCount, attended });
 
     const prayCountMap: Record<string, number> = {};
     (allPrays ?? []).forEach((p: any) => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
@@ -120,7 +130,7 @@ export default function AdminHome() {
               <Text style={styles.prayerBody}>{item.body}</Text>
               <View style={styles.prayerFooter}>
                 <Text style={styles.prayerDate}>
-                  {new Date(item.created_at).toLocaleDateString(t('greeting') === 'Hello' ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' })}
+                  {new Date(item.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric' })}
                 </Text>
                 {item.prayCount > 0 && (
                   <Text style={styles.prayedBadge}>🙏 {item.prayCount}{t('prayedCount')}</Text>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 
@@ -27,12 +27,12 @@ export default function FindCommunity() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    await supabase.from('join_requests').upsert(
+    const { error } = await supabase.from('join_requests').upsert(
       { user_id: user.id, church_id: selected.id, status: 'pending' },
       { onConflict: 'user_id,church_id', ignoreDuplicates: true }
     );
-
     setLoading(false);
+    if (error) { Alert.alert('오류', error.message); return; }
     router.replace({ pathname: '/(auth)/pending', params: { churchName: selected.name } });
   }
 

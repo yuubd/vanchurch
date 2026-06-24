@@ -25,7 +25,7 @@ export default function AdminLayout() {
         const roles: string[] = data?.roles ?? [];
         if (roles.includes('admin') || roles.includes('pastor')) {
           setIsPastor(roles.includes('pastor'));
-          setCanSeeFeedback(user.phone?.replace(/\D/g, '') === '11000000010');
+          setCanSeeFeedback(roles.includes('pastor') || roles.includes('admin'));
           setAllowed(true);
           if (data?.church_id) {
             supabase.from('join_requests').select('id', { count: 'exact', head: true })
