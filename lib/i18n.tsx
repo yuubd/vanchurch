@@ -55,7 +55,6 @@ const strings = {
     saveBtn: '저장하기',
     // Admin home
     quickMenu: '빠른 메뉴',
-    attendance: '출석',
     thisWeekPrayers: '이번 주 %건',
     totalMembers: '총 %명',
     cellsRunning: '%개 셀 운영 중',
@@ -94,7 +93,6 @@ const strings = {
     prayerFor: '기도제목 대상',
     addMember: '멤버 추가',
     addMemberHint: '이 번호로 로그인하면 공동체 가입이 자동으로 완료됩니다',
-    add: '추가',
     // Feedback
     feedback: '피드백',
     feedbackPlaceholder: '의견이나 건의사항을 남겨주세요...',
@@ -113,6 +111,10 @@ const strings = {
     pendingSub: '관리자가 승인하면\n바로 입장할 수 있어요',
     pendingHint: '승인을 기다리는 중입니다...',
     namePlaceholder: '홍길동',
+    cellPrayerSharing: '셀 기도제목 공유',
+    cellPrayerSharingDesc: '셀 멤버들이 서로의 기도제목을 볼 수 있습니다',
+    cellPrayersSection: '우리 셀 기도제목',
+    myPrayersSection: '내 기도제목',
   },
   en: {
     // Nav
@@ -165,7 +167,6 @@ const strings = {
     saveBtn: 'Save',
     // Admin home
     quickMenu: 'Quick Menu',
-    attendance: 'Attendance',
     thisWeekPrayers: '% this week',
     totalMembers: '% members',
     cellsRunning: '% cells active',
@@ -204,7 +205,6 @@ const strings = {
     prayerFor: 'Prayer for',
     addMember: 'Add member',
     addMemberHint: 'When they log in with this number, they\'ll be added to your community automatically',
-    add: 'Add',
     // Feedback
     feedback: 'Feedback',
     feedbackPlaceholder: 'Share your thoughts or suggestions...',
@@ -223,6 +223,10 @@ const strings = {
     pendingSub: 'Once approved by an admin\nyou\'ll be able to join right away',
     pendingHint: 'Waiting for approval...',
     namePlaceholder: 'John Doe',
+    cellPrayerSharing: 'Cell prayer sharing',
+    cellPrayerSharingDesc: 'Cell members can see each other\'s prayer requests',
+    cellPrayersSection: 'Cell prayer requests',
+    myPrayersSection: 'My prayer requests',
   },
 };
 

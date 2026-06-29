@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -32,6 +32,9 @@ export default function PrayersScreen() {
   const { t, lang } = useTranslation();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [myId, setMyId] = useState('');
+  const [churchId, setChurchId] = useState('');
+  const [sharingEnabled, setSharingEnabled] = useState(false);
+  const [togglingSharing, setTogglingSharing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
 
   const week = getWeekRange(weekOffset, lang);
@@ -48,6 +51,20 @@ export default function PrayersScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setMyId(user.id);
+    const { data } = await supabase.from('users').select('church_id').eq('id', user.id).single();
+    if (data?.church_id) {
+      setChurchId(data.church_id);
+      const { data: church } = await supabase.from('churches').select('cell_prayer_sharing').eq('id', data.church_id).single();
+      setSharingEnabled(church?.cell_prayer_sharing ?? false);
+    }
+  }
+
+  async function toggleSharing(value: boolean) {
+    setTogglingSharing(true);
+    const { error } = await supabase.from('churches').update({ cell_prayer_sharing: value }).eq('id', churchId);
+    setTogglingSharing(false);
+    if (error) { Alert.alert('Error', error.message); return; }
+    setSharingEnabled(value);
   }
 
   async function loadRequests(userId: string) {
@@ -101,6 +118,20 @@ export default function PrayersScreen() {
         <Text style={styles.title}>{t('prayerRequests')}</Text>
       </View>
 
+      <View style={styles.sharingRow}>
+        <View style={styles.sharingText}>
+          <Text style={styles.sharingLabel}>{t('cellPrayerSharing')}</Text>
+          <Text style={styles.sharingDesc}>{t('cellPrayerSharingDesc')}</Text>
+        </View>
+        <Switch
+          value={sharingEnabled}
+          onValueChange={toggleSharing}
+          disabled={togglingSharing || !churchId}
+          trackColor={{ false: '#E5E7EB', true: '#BFDBFE' }}
+          thumbColor={sharingEnabled ? '#2563EB' : '#9CA3AF'}
+        />
+      </View>
+
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn}>
           <Ionicons name="chevron-back" size={20} color="#374151" />
@@ -145,6 +176,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   title: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
+  sharingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#F3F4F6', gap: 16 },
+  sharingText: { flex: 1 },
+  sharingLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  sharingDesc: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingVertical: 12, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   navBtn: { padding: 4 },
   dateLabel: { fontSize: 14, fontWeight: '700', color: '#111827', minWidth: 160, textAlign: 'center' },

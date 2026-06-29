@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.vanchurch.app"
+      "bundleIdentifier": "com.vanchurch.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhoneNumberUsageDescription": "Your phone number is used to verify your identity via SMS."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,6 +35,13 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "vanchurch"
+    "scheme": "vanchurch",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6637e70f-ad7b-4879-b9f3-d911b0ef7524"
+      }
+    },
+    "owner": "davidgkim93"
   }
 }
