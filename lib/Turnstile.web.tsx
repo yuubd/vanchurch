@@ -33,9 +33,9 @@ export default function Turnstile({ onToken, onError }: Props) {
       if (window.turnstile && containerRef.current && !widgetId.current) {
         widgetId.current = window.turnstile.render(containerRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          size: 'invisible',
           callback: (token: string) => onTokenRef.current(token),
           'error-callback': () => onErrorRef.current(),
+          'refresh-expired': 'auto',
         });
         clearInterval(interval);
       }
@@ -50,5 +50,5 @@ export default function Turnstile({ onToken, onError }: Props) {
     };
   }, []);
 
-  return <div ref={containerRef} />;
+  return <div ref={containerRef} style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }} />;
 }
