@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAADnapb_zU7u6dVfW';
 
@@ -6,12 +6,14 @@ declare global {
   interface Window { turnstile: any; }
 }
 
+export type TurnstileRef = { reset: () => void };
+
 type Props = {
   onToken: (token: string) => void;
   onError: () => void;
 };
 
-export default function Turnstile({ onToken, onError }: Props) {
+const Turnstile = forwardRef<TurnstileRef, Props>(function Turnstile({ onToken, onError }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
@@ -19,6 +21,14 @@ export default function Turnstile({ onToken, onError }: Props) {
 
   useEffect(() => { onTokenRef.current = onToken; }, [onToken]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
+  useImperativeHandle(ref, () => ({
+    reset() {
+      if (widgetId.current && window.turnstile) {
+        window.turnstile.reset(widgetId.current);
+      }
+    },
+  }));
 
   useEffect(() => {
     if (!document.getElementById('cf-turnstile-script')) {
@@ -51,4 +61,6 @@ export default function Turnstile({ onToken, onError }: Props) {
   }, []);
 
   return <div ref={containerRef} style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }} />;
-}
+});
+
+export default Turnstile;

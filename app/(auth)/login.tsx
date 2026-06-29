@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import Turnstile from '../../lib/Turnstile';
+import Turnstile, { TurnstileRef } from '../../lib/Turnstile';
 import { useTranslation } from '../../lib/i18n';
 
 function toE164(raw: string): string {
@@ -30,6 +30,7 @@ export default function LoginScreen() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaError, setCaptchaError] = useState(false);
   const otpRef = useRef<TextInput>(null);
+  const turnstileRef = useRef<TurnstileRef>(null);
 
   const handleCaptchaToken = useCallback((token: string) => {
     setCaptchaToken(token);
@@ -58,6 +59,7 @@ export default function LoginScreen() {
     setError('');
     const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: { captchaToken } });
     setCaptchaToken('');
+    turnstileRef.current?.reset();
     setLoading(false);
     if (err) { setError(err.message); return; }
     setStep('otp');
@@ -141,7 +143,7 @@ export default function LoginScreen() {
 
         {!!error && <Text style={styles.error}>{error}</Text>}
       </View>
-      <Turnstile onToken={handleCaptchaToken} onError={handleCaptchaError} />
+      <Turnstile ref={turnstileRef} onToken={handleCaptchaToken} onError={handleCaptchaError} />
     </KeyboardAvoidingView>
   );
 }

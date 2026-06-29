@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 
@@ -32,13 +32,22 @@ const HTML = `
 </html>
 `;
 
+export type TurnstileRef = { reset: () => void };
+
 type Props = {
   onToken: (token: string) => void;
   onError: () => void;
 };
 
-export default function Turnstile({ onToken, onError }: Props) {
-  const webviewRef = useRef(null);
+const Turnstile = forwardRef<TurnstileRef, Props>(function Turnstile({ onToken, onError }, ref) {
+  const webviewRef = useRef<WebView>(null);
+
+  useImperativeHandle(ref, () => ({
+    reset() {
+      // Reload the WebView to get a fresh Turnstile token
+      webviewRef.current?.reload();
+    },
+  }));
 
   function handleMessage(event: any) {
     try {
@@ -60,7 +69,9 @@ export default function Turnstile({ onToken, onError }: Props) {
       originWhitelist={['*']}
     />
   );
-}
+});
+
+export default Turnstile;
 
 const styles = StyleSheet.create({
   webview: { position: 'absolute', width: 300, height: 65, left: -9999, top: -9999 },
