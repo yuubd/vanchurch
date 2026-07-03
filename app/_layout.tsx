@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { LanguageProvider } from '../lib/i18n';
 import { INVITE_TOKEN_KEY, processInvite } from './join/[token]';
+import { isBiometricEnabled, storeSession } from '../lib/biometrics';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -18,8 +19,13 @@ export default function RootLayout() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+        isBiometricEnabled().then(enabled => {
+          if (enabled) storeSession(session.access_token, session.refresh_token);
+        });
+      }
     });
 
     return () => subscription.unsubscribe();

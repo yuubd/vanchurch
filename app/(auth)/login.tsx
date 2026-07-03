@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import Turnstile, { TurnstileRef } from '../../lib/Turnstile';
 import { useTranslation } from '../../lib/i18n';
+import { isBiometricEnabled, getStoredSession, promptBiometric, clearBiometrics, storeSession } from '../../lib/biometrics';
 
 function toE164(raw: string): string {
   const digits = raw.replace(/\D/g, '');
@@ -29,8 +30,29 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaError, setCaptchaError] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const otpRef = useRef<TextInput>(null);
   const turnstileRef = useRef<TurnstileRef>(null);
+
+  useEffect(() => {
+    tryBiometricLogin();
+  }, []);
+
+  async function tryBiometricLogin() {
+    const enabled = await isBiometricEnabled();
+    if (!enabled) return;
+    const stored = await getStoredSession();
+    if (!stored) return;
+    setBiometricAvailable(true);
+    const passed = await promptBiometric();
+    if (!passed) return;
+    const { error } = await supabase.auth.setSession(stored);
+    if (error) {
+      await clearBiometrics();
+      setBiometricAvailable(false);
+    }
+    // success → _layout.tsx onAuthStateChange handles redirect
+  }
 
   const handleCaptchaToken = useCallback((token: string) => {
     setCaptchaToken(token);
@@ -71,9 +93,14 @@ export default function LoginScreen() {
     if (otp.length < 6) { setError(t('otpRequired')); return; }
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.auth.verifyOtp({ phone: e164, token: otp, type: 'sms' });
+    const { data, error: err } = await supabase.auth.verifyOtp({ phone: e164, token: otp, type: 'sms' });
     setLoading(false);
     if (err) { setError(t('otpInvalid')); return; }
+    // Store session for future biometric login if enabled
+    if (data.session) {
+      const enabled = await isBiometricEnabled();
+      if (enabled) await storeSession(data.session.access_token, data.session.refresh_token);
+    }
     // _layout.tsx handles redirect via onAuthStateChange
   }
 
@@ -141,6 +168,12 @@ export default function LoginScreen() {
           </View>
         )}
 
+        {biometricAvailable && step === 'phone' && (
+          <TouchableOpacity style={styles.biometricBtn} onPress={tryBiometricLogin}>
+            <Text style={styles.biometricText}>🔒 Face ID로 로그인</Text>
+          </TouchableOpacity>
+        )}
+
         {!!error && <Text style={styles.error}>{error}</Text>}
       </View>
       <Turnstile ref={turnstileRef} onToken={handleCaptchaToken} onError={handleCaptchaError} />
@@ -165,5 +198,7 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   resend: { alignItems: 'center', marginTop: 16 },
   resendText: { fontSize: 14, color: '#9CA3AF' },
+  biometricBtn: { alignItems: 'center', marginTop: 20, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB' },
+  biometricText: { fontSize: 15, color: '#2563EB', fontWeight: '600' },
   error: { color: '#DC2626', fontSize: 13, marginTop: 16, textAlign: 'center' },
 });

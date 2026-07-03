@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
+import { clearBiometrics } from '../../lib/biometrics';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
 
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
   }
 
   async function logout() {
+    await clearBiometrics();
     await supabase.auth.signOut();
     router.replace('/(auth)/login');
   }

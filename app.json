@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.vanchurch.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhoneNumberUsageDescription": "Your phone number is used to verify your identity via SMS."
+        "NSPhoneNumberUsageDescription": "Your phone number is used to verify your identity via SMS.",
+        "NSFaceIDUsageDescription": "Use Face ID to sign in quickly and securely."
       }
     },
     "android": {
@@ -33,7 +34,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store"
     ],
     "scheme": "vanchurch",
     "extra": {

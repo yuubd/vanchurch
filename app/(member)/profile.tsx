@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
+import { isBiometricAvailable, isBiometricEnabled, setBiometricEnabled, storeSession, clearBiometrics, promptBiometric } from '../../lib/biometrics';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
 
@@ -23,10 +24,18 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricOn, setBiometricOn] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => {
+    loadProfile();
+    if (Platform.OS !== 'web') {
+      isBiometricAvailable().then(setBiometricSupported);
+      isBiometricEnabled().then(setBiometricOn);
+    }
+  }, []);
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +47,22 @@ export default function ProfileScreen() {
     setProfile({ ...(data as any), phone: user?.phone ?? null });
   }
 
+  async function toggleBiometric(value: boolean) {
+    if (value) {
+      const passed = await promptBiometric();
+      if (!passed) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) await storeSession(session.access_token, session.refresh_token);
+      await setBiometricEnabled(true);
+      setBiometricOn(true);
+    } else {
+      await clearBiometrics();
+      setBiometricOn(false);
+    }
+  }
+
   async function logout() {
+    await clearBiometrics();
     await supabase.auth.signOut();
     router.replace('/(auth)/login');
   }
@@ -90,6 +114,21 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
+
+          {biometricSupported && (
+            <View style={[styles.section, styles.biometricRow]}>
+              <View>
+                <Text style={styles.biometricLabel}>Face ID / Touch ID</Text>
+                <Text style={styles.biometricSub}>{biometricOn ? '다음 로그인 시 생체 인증 사용' : '빠른 로그인을 위해 활성화하세요'}</Text>
+              </View>
+              <Switch
+                value={biometricOn}
+                onValueChange={toggleBiometric}
+                trackColor={{ false: '#E5E7EB', true: '#BFDBFE' }}
+                thumbColor={biometricOn ? '#2563EB' : '#9CA3AF'}
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -116,6 +155,9 @@ const styles = StyleSheet.create({
   langBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   langBtnText: { fontSize: 14, color: '#666', fontWeight: '500' },
   langBtnTextActive: { color: '#fff', fontWeight: '600' },
+  biometricRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  biometricLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  biometricSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });
