@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
@@ -44,6 +44,7 @@ export default function MembersScreen() {
   const [cells, setCells] = useState<Cell[]>([]);
   const [editing, setEditing] = useState<Member | null>(null);
   const [saving, setSaving] = useState(false);
+  const nameInputRef = useRef<TextInput>(null);
   const [sortMode, setSortMode] = useState<SortMode>('cell');
   const [sortAsc, setSortAsc] = useState(true);
   const [myRoles, setMyRoles] = useState<string[]>([]);
@@ -228,16 +229,16 @@ export default function MembersScreen() {
         ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
       />
 
-      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)}>
+      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => nameInputRef.current?.focus()}>
         <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Text style={styles.modalTitle}>{t('addMember')}</Text>
           <Text style={styles.label}>{t('name')}</Text>
           <TextInput
+            ref={nameInputRef}
             style={styles.textInput}
             placeholder={t('namePlaceholder')}
             value={newName}
             onChangeText={setNewName}
-            autoFocus
           />
           <Text style={styles.label}>{t('phoneNumber')}</Text>
           <TextInput

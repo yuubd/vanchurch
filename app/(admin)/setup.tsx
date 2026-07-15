@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from '../../lib/i18n';
 
 export default function ChurchSetup() {
   const [churchName, setChurchName] = useState('');
   const [saving, setSaving] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation();
 
   async function createChurch() {
     if (!churchName.trim()) return;
@@ -44,7 +46,7 @@ export default function ChurchSetup() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Text style={styles.title}>VanChurch</Text>
+      <Text style={styles.title}>{t('brandName')}</Text>
       <Text style={styles.subtitle}>{'교회 이름을 입력하세요\nEnter your church name'}</Text>
       <TextInput
         style={styles.input}

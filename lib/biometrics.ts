@@ -1,8 +1,15 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SESSION_KEY = 'biometric_session';
 const ENABLED_KEY = 'biometric_enabled';
+
+// Localized Face ID prompt strings, keyed by the same 'lang' value i18n persists in AsyncStorage
+const BIOMETRIC_PROMPTS = {
+  ko: { promptMessage: '기도제목에 로그인', fallbackLabel: '전화번호 사용', cancelLabel: '취소' },
+  en: { promptMessage: 'Sign in to PrayerRoom', fallbackLabel: 'Use phone number', cancelLabel: 'Cancel' },
+};
 
 export async function isBiometricAvailable(): Promise<boolean> {
   const compatible = await LocalAuthentication.hasHardwareAsync();
@@ -35,10 +42,13 @@ export async function clearBiometrics(): Promise<void> {
 }
 
 export async function promptBiometric(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem('lang');
+  const lang = stored === 'en' ? 'en' : 'ko';
+  const prompts = BIOMETRIC_PROMPTS[lang];
   const result = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'Sign in to VanChurch',
-    fallbackLabel: 'Use phone number',
-    cancelLabel: 'Cancel',
+    promptMessage: prompts.promptMessage,
+    fallbackLabel: prompts.fallbackLabel,
+    cancelLabel: prompts.cancelLabel,
     disableDeviceFallback: false,
   });
   return result.success;

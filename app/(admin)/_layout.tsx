@@ -15,7 +15,6 @@ export default function AdminLayout() {
   const { t } = useTranslation();
   const [allowed, setAllowed] = useState(false);
   const [isPastor, setIsPastor] = useState(false);
-  const [canSeeFeedback, setCanSeeFeedback] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -25,7 +24,6 @@ export default function AdminLayout() {
         const roles: string[] = data?.roles ?? [];
         if (roles.includes('admin') || roles.includes('pastor')) {
           setIsPastor(roles.includes('pastor'));
-          setCanSeeFeedback(roles.includes('pastor') || roles.includes('admin'));
           setAllowed(true);
           if (data?.church_id) {
             supabase.from('join_requests').select('id', { count: 'exact', head: true })
@@ -67,7 +65,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="prayers" options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"   focused={focused} />, href: isPastor ? undefined : null }} />
       <Tabs.Screen name="members" options={{ title: t('members'), tabBarIcon: ({ focused }) => <TabIcon name="people" focused={focused} />, tabBarBadge: pendingCount > 0 ? pendingCount : undefined }} />
       <Tabs.Screen name="cells"   options={{ title: t('cells'),          tabBarIcon: ({ focused }) => <TabIcon name="grid"    focused={focused} /> }} />
-      <Tabs.Screen name="feedback" options={{ title: t('feedback'), tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-ellipses" focused={focused} />, href: canSeeFeedback ? undefined : null }} />
+      <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person"  focused={focused} /> }} />
       <Tabs.Screen name="setup"   options={{ href: null }} />
     </Tabs>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
@@ -15,6 +15,7 @@ export default function CellsScreen() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
+  const addInputRef = useRef<TextInput>(null);
   const { t } = useTranslation();
 
   useEffect(() => { loadData(); }, []);
@@ -172,11 +173,11 @@ export default function CellsScreen() {
         </View>
       </Modal>
 
-      <Modal visible={adding} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={adding} animationType="slide" presentationStyle="pageSheet" onShow={() => addInputRef.current?.focus()}>
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>{t('addCell')}</Text>
           <Text style={styles.label}>{t('cellName')}</Text>
-          <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder={t('cellNamePlaceholder')} autoFocus />
+          <TextInput ref={addInputRef} style={styles.input} value={newName} onChangeText={setNewName} placeholder={t('cellNamePlaceholder')} />
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={addCell} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? '...' : t('add')}</Text>
           </TouchableOpacity>

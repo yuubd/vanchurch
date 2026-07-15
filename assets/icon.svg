@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D3FAA;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="10" stdDeviation="20" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#grad)"/>
+  <text x="512" y="750" font-size="600" text-anchor="middle" dominant-baseline="central" filter="url(#shadow)">🙏</text>
+</svg>

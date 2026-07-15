@@ -1,14 +1,16 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '../../lib/i18n';
 
 export default function Onboarding() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
       <View style={styles.top}>
         <Text style={styles.logo}>⛪</Text>
-        <Text style={styles.title}>VanChurch</Text>
+        <Text style={styles.title}>{t('brandName')}</Text>
         <Text style={styles.sub}>공동체를 만들거나{'\n'}기존 공동체에 참여하세요</Text>
       </View>
 

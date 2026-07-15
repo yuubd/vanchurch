@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import Turnstile, { TurnstileRef } from '../../lib/Turnstile';
 import { useTranslation } from '../../lib/i18n';
@@ -19,10 +20,14 @@ function formatDisplay(digits: string, deleting: boolean): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
 
+// Dev-only test numbers — add these in Supabase Auth > Phone > Test phone numbers with OTP 000000
+const DEV_TEST_PHONES = __DEV__ ? ['+10000000000'] : [];
+
 type Step = 'phone' | 'otp';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -76,14 +81,22 @@ export default function LoginScreen() {
       setError(t('phoneRequired'));
       return;
     }
-    if (!captchaToken) { setError('보안 확인을 기다리는 중입니다. 잠시 후 다시 시도해주세요'); return; }
+    const isTestPhone = DEV_TEST_PHONES.includes(e164);
+    // Turnstile is web-only. Native has no captcha widget yet, so skip the client-side
+    // check on native entirely (Supabase captcha must stay OFF until native Turnstile is added).
+    const skipCaptcha = isTestPhone || Platform.OS !== 'web';
+    if (!skipCaptcha && !captchaToken) {
+      setError(t('captchaWaiting'));
+      return;
+    }
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: { captchaToken } });
-    setCaptchaToken('');
-    turnstileRef.current?.reset();
+    const opts = skipCaptcha ? {} : { captchaToken };
+    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: opts });
+    if (!isTestPhone) { setCaptchaToken(''); turnstileRef.current?.reset(); }
     setLoading(false);
     if (err) { setError(err.message); return; }
+    if (isTestPhone) setOtp('000000');
     setStep('otp');
     setTimeout(() => otpRef.current?.focus(), 100);
   }
@@ -111,14 +124,14 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
-        <Text style={styles.logo}>VanChurch</Text>
-        <Text style={styles.logoSub}>기도와 교제, 한 곳에서</Text>
+        <Text style={styles.logo}>{t('brandName')}</Text>
+        <Text style={styles.logoSub}>{t('tagline')}</Text>
 
         {step === 'phone' ? (
           <View style={styles.form}>
-            <Text style={styles.label}>핸드폰 번호</Text>
+            <Text style={styles.label}>{t('phoneLabel')}</Text>
             <TextInput
               style={styles.input}
               placeholder="604-000-0000"
@@ -134,7 +147,7 @@ export default function LoginScreen() {
               onPress={sendOtp}
               disabled={phone.replace(/\D/g, '').length < 10 || loading}
             >
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>인증번호 받기</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{t('getOtp')}</Text>}
             </TouchableOpacity>
           </View>
         ) : (
@@ -142,8 +155,8 @@ export default function LoginScreen() {
             <TouchableOpacity onPress={goBack} style={styles.back}>
               <Text style={styles.backText}>‹ {toE164(phone)}</Text>
             </TouchableOpacity>
-            <Text style={styles.label}>인증번호 6자리</Text>
-            <Text style={styles.otpHint}>문자로 받은 코드를 입력해주세요</Text>
+            <Text style={styles.label}>{t('otpSixDigit')}</Text>
+            <Text style={styles.otpHint}>{t('otpHint')}</Text>
             <TextInput
               ref={otpRef}
               style={[styles.input, styles.otpInput]}
@@ -160,17 +173,17 @@ export default function LoginScreen() {
               onPress={verifyOtp}
               disabled={otp.length < 6 || loading}
             >
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>확인</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{t('confirm')}</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={styles.resend} onPress={sendOtp} disabled={loading}>
-              <Text style={styles.resendText}>코드 재전송</Text>
+              <Text style={styles.resendText}>{t('resendCode')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {biometricAvailable && step === 'phone' && (
           <TouchableOpacity style={styles.biometricBtn} onPress={tryBiometricLogin}>
-            <Text style={styles.biometricText}>🔒 Face ID로 로그인</Text>
+            <Text style={styles.biometricText}>{t('faceIdLogin')}</Text>
           </TouchableOpacity>
         )}
 

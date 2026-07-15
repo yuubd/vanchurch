@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
@@ -43,6 +43,7 @@ export default function LeaderPrayers() {
   const [draft, setDraft] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [loading, setLoading] = useState(false);
+  const draftInputRef = useRef<TextInput>(null);
 
   const week = getWeekRange(weekOffset, lang);
 
@@ -175,7 +176,7 @@ export default function LeaderPrayers() {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet" onShow={() => draftInputRef.current?.focus()}>
         <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t('sharePrayerTitle')}</Text>
@@ -197,13 +198,13 @@ export default function LeaderPrayers() {
           </View>
 
           <TextInput
+            ref={draftInputRef}
             style={styles.input}
             placeholder={t('sharePrayer')}
             multiline
             value={draft}
             onChangeText={setDraft}
             textAlignVertical="top"
-            autoFocus
             maxLength={500}
           />
           <Text style={styles.charCount}>{draft.length} / 500</Text>

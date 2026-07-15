@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -24,6 +24,7 @@ export default function AdminHome() {
   const [modalVisible, setModalVisible] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const draftInputRef = useRef<TextInput>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -147,11 +148,12 @@ export default function AdminHome() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)} onShow={() => draftInputRef.current?.focus()}>
         <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('sharePrayerTitle')}</Text>
             <TextInput
+              ref={draftInputRef}
               style={styles.modalInput}
               placeholder={t('sharePrayer')}
               multiline
@@ -159,7 +161,6 @@ export default function AdminHome() {
               onChangeText={setDraft}
               textAlignVertical="top"
               maxLength={500}
-              autoFocus
             />
             <Text style={styles.charCount}>{draft.length} / 500</Text>
             <View style={styles.modalBtns}>

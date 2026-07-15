@@ -15,6 +15,8 @@ export default function MemberHome() {
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState('');
+  const [editDraft, setEditDraft] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -125,6 +127,40 @@ export default function MemberHome() {
     loadData();
   }
 
+  function startEdit(id: string, body: string) {
+    setEditingId(id);
+    setEditDraft(body);
+  }
+
+  function cancelEdit() {
+    setEditingId('');
+    setEditDraft('');
+  }
+
+  async function saveEdit(id: string) {
+    if (!editDraft.trim()) return;
+    const { data, error } = await supabase.from('prayer_requests').update({ body: editDraft.trim() }).eq('id', id).select();
+    if (error) { Alert.alert('오류', error.message); return; }
+    if (!data || data.length === 0) { Alert.alert('오류', t('editFailed')); return; }
+    setEditingId('');
+    setEditDraft('');
+    loadData();
+  }
+
+  function confirmDelete(id: string) {
+    Alert.alert(t('deleteConfirm'), '', [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: () => deletePrayer(id) },
+    ]);
+  }
+
+  async function deletePrayer(id: string) {
+    const { data, error } = await supabase.from('prayer_requests').delete().eq('id', id).select();
+    if (error) { Alert.alert('오류', error.message); return; }
+    if (!data || data.length === 0) { Alert.alert('오류', t('deleteFailed')); return; }
+    loadData();
+  }
+
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
 
   return (
@@ -189,13 +225,49 @@ export default function MemberHome() {
             <Text style={styles.sectionLabel}>{t('myPrayersSection')}</Text>
             {prayers.map(item => (
               <View key={item.id} style={styles.card}>
-                <Text style={styles.body}>{item.body}</Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</Text>
-                  {item.prayCount > 0 && (
-                    <Text style={styles.prayedBadge}>🙏 {item.prayCount}{t('prayedCount')}</Text>
-                  )}
-                </View>
+                {editingId === item.id ? (
+                  <View>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editDraft}
+                      onChangeText={setEditDraft}
+                      multiline
+                      textAlignVertical="top"
+                      maxLength={500}
+                      autoFocus
+                    />
+                    <View style={styles.editActions}>
+                      <TouchableOpacity style={styles.editCancelBtn} onPress={cancelEdit}>
+                        <Text style={styles.editCancelText}>{t('cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.editSaveBtn, !editDraft.trim() && styles.submitDisabled]}
+                        onPress={() => saveEdit(item.id)}
+                        disabled={!editDraft.trim()}
+                      >
+                        <Text style={styles.editSaveText}>{t('save')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={styles.body}>{item.body}</Text>
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</Text>
+                      <View style={styles.myPrayerActions}>
+                        {item.prayCount > 0 && (
+                          <Text style={styles.prayedBadge}>🙏 {item.prayCount}{t('prayedCount')}</Text>
+                        )}
+                        <TouchableOpacity onPress={() => startEdit(item.id, item.body)} hitSlop={8}>
+                          <Text style={styles.actionText}>{t('edit')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDelete(item.id)} hitSlop={8}>
+                          <Text style={styles.actionTextDanger}>{t('delete')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             ))}
             {prayers.length === 0 && <Text style={styles.empty}>{t('noPrayersYet')}</Text>}
@@ -232,4 +304,13 @@ const styles = StyleSheet.create({
   prayBtnText: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
   prayBtnTextActive: { color: '#2563EB' },
   empty: { textAlign: 'center', marginTop: 24, color: '#9CA3AF', fontSize: 15 },
+  myPrayerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  actionText: { fontSize: 13, color: '#2563EB', fontWeight: '600' },
+  actionTextDanger: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
+  editInput: { fontSize: 15, color: '#111827', lineHeight: 22, minHeight: 70, borderWidth: 1.5, borderColor: '#BFDBFE', borderRadius: 10, padding: 12, backgroundColor: '#F9FAFB', textAlignVertical: 'top' },
+  editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 },
+  editCancelBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  editCancelText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+  editSaveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: '#2563EB' },
+  editSaveText: { fontSize: 13, color: '#fff', fontWeight: '700' },
 });
