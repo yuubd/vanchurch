@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { LanguageProvider } from '../lib/i18n';
 import { INVITE_TOKEN_KEY, processInvite } from './join/[token]';
@@ -12,6 +13,13 @@ export default function RootLayout() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+
+  useEffect(() => {
+    // Preload the icon font so tab-bar icons paint on first render in dev / fresh simulators.
+    // Production builds bundle the font natively; optional-chained so it never crashes if absent.
+    const iconSet = Ionicons as unknown as { loadFont?: () => Promise<void> };
+    iconSet.loadFont?.().catch(() => {});
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
