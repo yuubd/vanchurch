@@ -73,8 +73,8 @@ prayer,church,community,cell group,faith,worship,christian,prayer request,fellow
 ---
 
 ## Promotional text (max 170 chars, optional — can change without a new build)
-- **English:** `Share prayer requests, pray for your cell group, and stay connected as a community — all in one simple app.`
-- **Korean:** `기도제목을 나누고, 우리 셀을 위해 기도하며, 공동체로 연결되세요. 하나의 간단한 앱에서.`
+- **English:** `Share prayer requests, pray for your cell group, and stay connected as a community. No passwords — just sign in with your phone.`
+- **Korean:** `기도제목을 나누고, 우리 셀을 위해 기도하며, 공동체로 연결되세요. 비밀번호 없이 전화번호로 간편하게 로그인하세요.`
 
 ---
 
