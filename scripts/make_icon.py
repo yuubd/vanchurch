@@ -78,7 +78,7 @@ W = H = 1024
 C0 = (37, 99, 235)   # #2563EB
 C1 = (29, 63, 170)   # #1D3FAA
 
-TARGET = 660                    # footprint of the hands artwork on the icon
+TARGET = 780                    # footprint of the hands artwork on the icon
 OX = (W - TARGET) // 2          # centered horizontally
 OY = int(H * 0.50) - TARGET // 2  # centered, nudged for optical balance
 scale = width / TARGET          # source px per target px
