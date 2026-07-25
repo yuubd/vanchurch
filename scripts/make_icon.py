@@ -1,11 +1,11 @@
 import zlib, struct, math, re, sys
 
 OUT = sys.argv[1]
-W = H = 1024
+W = H = int(sys.argv[2]) if len(sys.argv) > 2 else 1024
+FOOTPRINT_W = float(sys.argv[3]) if len(sys.argv) > 3 else 700.0  # width of the art
 SS = 3                      # supersampling
 C0 = (37, 99, 235)          # #2563EB
 C1 = (29, 63, 170)          # #1D3FAA
-FOOTPRINT_W = 620.0         # target width of the art on the 1024 icon
 
 D = ("M272 191.91c-17.6 0-32 14.4-32 32v80c0 8.84-7.16 16-16 16s-16-7.16-16-16v-76.55"
      "c0-17.39 4.72-34.47 13.69-49.39l77.75-129.59c9.09-15.16 4.19-34.81-10.97-43.91"
