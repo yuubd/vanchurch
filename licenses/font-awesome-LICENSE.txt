@@ -1,0 +1,14 @@
+The app icon (assets/icon.png) is the "praying-hands" icon from Font Awesome
+Free (v5.15.4), recolored white and composited onto the app's brand gradient.
+
+Icon:      praying-hands (fas)
+Source:    https://fontawesome.com/icons/praying-hands
+Author:    Font Awesome — Fonticons, Inc.
+Copyright: Copyright 2026 Fonticons, Inc.
+License:   Font Awesome Free License — icons are CC BY 4.0
+           https://fontawesome.com/license/free
+           https://creativecommons.org/licenses/by/4.0/
+
+Attribution: Icon by Font Awesome (https://fontawesome.com), licensed under
+CC BY 4.0. The icon has been modified (recolored and composited onto a
+background gradient).
