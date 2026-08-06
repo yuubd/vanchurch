@@ -6,13 +6,26 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sbvhaphlwrogbkniwjtq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNidmhhcGhsd3JvZ2Jrbml3anRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjQwNjEsImV4cCI6MjA5MzYwMDA2MX0.dq93NH8Lo5JRZdOlWY9J5SY4LYJDGfBA5gkZJzXka9Q"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sbvhaphlwrogbkniwjtq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNidmhhcGhsd3JvZ2Jrbml3anRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjQwNjEsImV4cCI6MjA5MzYwMDA2MX0.dq93NH8Lo5JRZdOlWY9J5SY4LYJDGfBA5gkZJzXka9Q"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sbvhaphlwrogbkniwjtq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNidmhhcGhsd3JvZ2Jrbml3anRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjQwNjEsImV4cCI6MjA5MzYwMDA2MX0.dq93NH8Lo5JRZdOlWY9J5SY4LYJDGfBA5gkZJzXka9Q"
+      }
     }
   },
   "submit": {

@@ -74,3 +74,8 @@ export async function processInvite(userId: string, token: string, router: Retur
   await AsyncStorage.removeItem(INVITE_TOKEN_KEY);
   router.replace({ pathname: '/(auth)/pending', params: { churchName: church.name } });
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', gap: 16 },
+  text: { fontSize: 15, color: '#9CA3AF' },
+});
