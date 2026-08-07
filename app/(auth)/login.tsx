@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import Turnstile, { TurnstileRef } from '../../lib/Turnstile';
@@ -124,8 +124,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.inner}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[styles.inner, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.logo}>{t('brandName')}</Text>
         <Text style={styles.logoSub}>{t('tagline')}</Text>
 
@@ -188,7 +192,7 @@ export default function LoginScreen() {
         )}
 
         {!!error && <Text style={styles.error}>{error}</Text>}
-      </View>
+      </ScrollView>
       <Turnstile ref={turnstileRef} onToken={handleCaptchaToken} onError={handleCaptchaError} />
     </KeyboardAvoidingView>
   );
@@ -196,7 +200,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  inner: { flex: 1, padding: 28, justifyContent: 'center' },
+  inner: { flexGrow: 1, paddingHorizontal: 28, justifyContent: 'center' },
   logo: { fontSize: 34, fontWeight: '900', color: '#2563EB', textAlign: 'center', marginBottom: 6, letterSpacing: -0.5 },
   logoSub: { fontSize: 15, color: '#9CA3AF', textAlign: 'center', marginBottom: 52 },
   form: {},
