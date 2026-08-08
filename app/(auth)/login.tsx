@@ -95,7 +95,15 @@ export default function LoginScreen() {
     const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: opts });
     if (!isTestPhone) { setCaptchaToken(''); turnstileRef.current?.reset(); }
     setLoading(false);
-    if (err) { setError(err.message); return; }
+    if (err) {
+      const m = (err.message || '').toLowerCase();
+      if (m.includes('rate') || m.includes('too many') || m.includes('security purposes')) {
+        setError(t('tooManyRequests'));
+      } else {
+        setError(t('signInError'));
+      }
+      return;
+    }
     if (isTestPhone) setOtp('000000');
     setStep('otp');
     setTimeout(() => otpRef.current?.focus(), 100);

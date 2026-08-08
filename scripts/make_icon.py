@@ -3,6 +3,7 @@ import zlib, struct, math, re, sys
 OUT = sys.argv[1]
 W = H = int(sys.argv[2]) if len(sys.argv) > 2 else 1024
 FOOTPRINT_W = float(sys.argv[3]) if len(sys.argv) > 3 else 700.0  # width of the art
+MODE = sys.argv[4] if len(sys.argv) > 4 else 'gradient'  # 'gradient' | 'transparent'
 SS = 3                      # supersampling
 C0 = (37, 99, 235)          # #2563EB
 C1 = (29, 63, 170)          # #1D3FAA
@@ -138,26 +139,31 @@ for row in range(H*SS):
         for p in range(pa, pb+1):
             crow[p // SS] += 1
 
-# ---- composite white over gradient ----
+# ---- composite: white hands over gradient, or white hands on transparent ----
 maxc = SS*SS
 rows = []
 for y in range(H):
     row = bytearray([0]); crow = cover[y]
     for x in range(W):
-        t = (x + y)/(W + H)
-        r = C0[0] + (C1[0]-C0[0])*t
-        g = C0[1] + (C1[1]-C0[1])*t
-        b = C0[2] + (C1[2]-C0[2])*t
         a = crow[x]/maxc
-        if a:
-            r = 255*a + r*(1-a); g = 255*a + g*(1-a); b = 255*a + b*(1-a)
-        row.append(int(r+0.5)); row.append(int(g+0.5)); row.append(int(b+0.5))
+        if MODE == 'transparent':
+            # white hands, alpha = coverage, transparent background (RGBA)
+            row.append(255); row.append(255); row.append(255); row.append(int(a*255 + 0.5))
+        else:
+            t = (x + y)/(W + H)
+            r = C0[0] + (C1[0]-C0[0])*t
+            g = C0[1] + (C1[1]-C0[1])*t
+            b = C0[2] + (C1[2]-C0[2])*t
+            if a:
+                r = 255*a + r*(1-a); g = 255*a + g*(1-a); b = 255*a + b*(1-a)
+            row.append(int(r+0.5)); row.append(int(g+0.5)); row.append(int(b+0.5))
     rows.append(bytes(row))
 
 def chunk(typ, d):
     c = typ + d
     return struct.pack(">I", len(d)) + c + struct.pack(">I", zlib.crc32(c) & 0xffffffff)
 sig = b"\x89PNG\r\n\x1a\n"
-ihdr = struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0)
+color_type = 6 if MODE == 'transparent' else 2  # 6=RGBA, 2=RGB
+ihdr = struct.pack(">IIBBBBB", W, H, 8, color_type, 0, 0, 0)
 open(OUT, "wb").write(sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
-print("wrote", OUT, "subpaths", len(subpaths), "edges", len(edges))
+print("wrote", OUT, "mode", MODE, "subpaths", len(subpaths), "edges", len(edges))
