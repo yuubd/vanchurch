@@ -41,11 +41,22 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loading) return;
-    const inAuth = segments[0] === '(auth)';
-    const inJoin = segments[0] === 'join';
+    // useSegments()'s typed-routes tuple type only guarantees index 0; cast to a
+    // plain string array since we need to inspect deeper segments at runtime.
+    const segs = segments as readonly string[];
+    const inAuth = segs[0] === '(auth)';
+    const inJoin = segs[0] === 'join';
+    const onLoginScreen = inAuth && segs[1] === 'login';
+    const initialLanding = segs.length === 0; // cold launch, before any route has settled
+    // Only redirect-by-role on cold launch, the login screen, or a join deep-link.
+    // Other (auth) screens (onboarding, create-community, find-community,
+    // profile-setup, pending) are deliberate steps the user is mid-way through and
+    // manage their own navigation — re-running this on every `segments` change
+    // while inside them bounced the user straight back to onboarding on every step
+    // (e.g. tapping "Create community" instantly redirected back).
     if (!session && !inAuth && !inJoin) {
       router.replace('/(auth)/login');
-    } else if (session && (inAuth || inJoin)) {
+    } else if (session && (initialLanding || onLoginScreen || inJoin)) {
       redirectByRole();
     }
   }, [session, loading, segments]);
