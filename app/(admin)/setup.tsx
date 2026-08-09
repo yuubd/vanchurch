@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvo
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
-import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
+import { useDelayedMount } from '../../lib/useDelayedMount';
 
 export default function ChurchSetup() {
   const [churchName, setChurchName] = useState('');
@@ -11,14 +11,11 @@ export default function ChurchSetup() {
   const router = useRouter();
   const { t } = useTranslation();
   const nameRef = useRef<TextInput>(null);
-  const namePlaceholder = useDelayedPlaceholder('밴쿠버 한인 교회...');
+  const inputReady = useDelayedMount();
 
-  // autoFocus during the stack-push transition makes iOS render the placeholder
-  // with expanded letter spacing; focusing after the transition settles avoids it.
   useEffect(() => {
-    const id = setTimeout(() => nameRef.current?.focus(), 350);
-    return () => clearTimeout(id);
-  }, []);
+    if (inputReady) nameRef.current?.focus();
+  }, [inputReady]);
 
   async function createChurch() {
     if (!churchName.trim()) return;
@@ -58,13 +55,17 @@ export default function ChurchSetup() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Text style={styles.title}>{t('brandName')}</Text>
       <Text style={styles.subtitle}>{'교회 이름을 입력하세요\nEnter your church name'}</Text>
-      <TextInput
-        ref={nameRef}
-        style={styles.input}
-        placeholder={namePlaceholder}
-        value={churchName}
-        onChangeText={setChurchName}
-      />
+      {inputReady ? (
+        <TextInput
+          ref={nameRef}
+          style={styles.input}
+          placeholder="밴쿠버 한인 교회..."
+          value={churchName}
+          onChangeText={setChurchName}
+        />
+      ) : (
+        <View style={styles.input} />
+      )}
       <TouchableOpacity
         style={[styles.button, saving && styles.disabled]}
         onPress={createChurch}

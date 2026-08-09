@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
+import { useDelayedMount } from '../../lib/useDelayedMount';
 
 export default function CreateCommunity() {
   const [name, setName] = useState('');
@@ -11,14 +11,11 @@ export default function CreateCommunity() {
   const [error, setError] = useState('');
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
-  const namePlaceholder = useDelayedPlaceholder('VKPC 밴쿠버 한인 장로교회');
+  const inputReady = useDelayedMount();
 
-  // autoFocus during the stack-push transition makes iOS render the placeholder
-  // with expanded letter spacing; focusing after the transition settles avoids it.
   useEffect(() => {
-    const id = setTimeout(() => nameRef.current?.focus(), 350);
-    return () => clearTimeout(id);
-  }, []);
+    if (inputReady) nameRef.current?.focus();
+  }, [inputReady]);
 
   async function create() {
     const trimmed = name.trim();
@@ -66,15 +63,19 @@ export default function CreateCommunity() {
         <Text style={styles.subtitle}>새로운 공동체를 시작하세요{'\n'}관리자 권한이 부여됩니다</Text>
 
         <Text style={styles.label}>공동체 이름 *</Text>
-        <TextInput
-          ref={nameRef}
-          style={styles.input}
-          placeholder={namePlaceholder}
-          value={name}
-          onChangeText={setName}
-          returnKeyType="done"
-          onSubmitEditing={create}
-        />
+        {inputReady ? (
+          <TextInput
+            ref={nameRef}
+            style={styles.input}
+            placeholder="VKPC 밴쿠버 한인 장로교회"
+            value={name}
+            onChangeText={setName}
+            returnKeyType="done"
+            onSubmitEditing={create}
+          />
+        ) : (
+          <View style={styles.input} />
+        )}
 
         <View style={styles.toggleRow}>
           <View>

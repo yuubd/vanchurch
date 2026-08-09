@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
+import { useDelayedMount } from '../../lib/useDelayedMount';
 
 type Church = { id: string; name: string };
 
@@ -12,7 +12,7 @@ export default function FindCommunity() {
   const [selected, setSelected] = useState<Church | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchPlaceholder = useDelayedPlaceholder('교회 이름 검색...');
+  const searchReady = useDelayedMount();
 
   useEffect(() => {
     supabase.from('churches').select('id, name').eq('is_public', true).order('name')
@@ -48,13 +48,17 @@ export default function FindCommunity() {
         <Text style={styles.subtitle}>참여할 공동체를 검색하세요</Text>
       </View>
 
-      <TextInput
-        style={styles.search}
-        placeholder={searchPlaceholder}
-        value={query}
-        onChangeText={setQuery}
-        clearButtonMode="while-editing"
-      />
+      {searchReady ? (
+        <TextInput
+          style={styles.search}
+          placeholder="교회 이름 검색..."
+          value={query}
+          onChangeText={setQuery}
+          clearButtonMode="while-editing"
+        />
+      ) : (
+        <View style={styles.search} />
+      )}
 
       <FlatList
         data={filtered}
