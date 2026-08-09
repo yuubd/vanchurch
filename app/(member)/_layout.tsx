@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
@@ -13,6 +14,7 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
 export default function MemberLayout() {
   const router = useRouter();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
@@ -49,11 +51,11 @@ export default function MemberLayout() {
           borderTopWidth: 0.5,
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',
-          height: 70,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom,
         },
         tabBarItemStyle: {
-          paddingTop: 6,
-          paddingBottom: 6,
+          paddingTop: 8,
         },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '400' },
         tabBarShowLabel: true,
