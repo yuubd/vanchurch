@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
+  const namePlaceholder = useDelayedPlaceholder('홍길동');
 
   // autoFocus during the stack-push transition makes iOS render the placeholder
   // with expanded letter spacing; focusing after the transition settles avoids it.
@@ -39,7 +41,7 @@ export default function ProfileSetup() {
         <TextInput
           ref={nameRef}
           style={styles.input}
-          placeholder="홍길동"
+          placeholder={namePlaceholder}
           value={name}
           onChangeText={setName}
           returnKeyType="done"

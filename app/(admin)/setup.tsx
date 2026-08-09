@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvo
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
 
 export default function ChurchSetup() {
   const [churchName, setChurchName] = useState('');
@@ -10,6 +11,7 @@ export default function ChurchSetup() {
   const router = useRouter();
   const { t } = useTranslation();
   const nameRef = useRef<TextInput>(null);
+  const namePlaceholder = useDelayedPlaceholder('밴쿠버 한인 교회...');
 
   // autoFocus during the stack-push transition makes iOS render the placeholder
   // with expanded letter spacing; focusing after the transition settles avoids it.
@@ -59,7 +61,7 @@ export default function ChurchSetup() {
       <TextInput
         ref={nameRef}
         style={styles.input}
-        placeholder="밴쿠버 한인 교회..."
+        placeholder={namePlaceholder}
         value={churchName}
         onChangeText={setChurchName}
       />

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { useDelayedPlaceholder } from '../../lib/useDelayedPlaceholder';
 
 export default function CreateCommunity() {
   const [name, setName] = useState('');
@@ -10,6 +11,7 @@ export default function CreateCommunity() {
   const [error, setError] = useState('');
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
+  const namePlaceholder = useDelayedPlaceholder('VKPC 밴쿠버 한인 장로교회');
 
   // autoFocus during the stack-push transition makes iOS render the placeholder
   // with expanded letter spacing; focusing after the transition settles avoids it.
@@ -67,7 +69,7 @@ export default function CreateCommunity() {
         <TextInput
           ref={nameRef}
           style={styles.input}
-          placeholder="VKPC 밴쿠버 한인 장로교회"
+          placeholder={namePlaceholder}
           value={name}
           onChangeText={setName}
           returnKeyType="done"
