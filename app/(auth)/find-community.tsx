@@ -51,7 +51,7 @@ export default function FindCommunity() {
       {searchReady ? (
         <TextInput
           style={styles.search}
-          placeholder="교회 이름 검색..."
+          placeholder="공동체 이름 검색..."
           value={query}
           onChangeText={setQuery}
           clearButtonMode="while-editing"

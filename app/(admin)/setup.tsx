@@ -54,12 +54,12 @@ export default function ChurchSetup() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Text style={styles.title}>{t('brandName')}</Text>
-      <Text style={styles.subtitle}>{'교회 이름을 입력하세요\nEnter your church name'}</Text>
+      <Text style={styles.subtitle}>{'공동체 이름을 입력하세요\nEnter your community name'}</Text>
       {inputReady ? (
         <TextInput
           ref={nameRef}
           style={styles.input}
-          placeholder="밴쿠버 한인 교회..."
+          placeholder="밴쿠버 한인 공동체..."
           value={churchName}
           onChangeText={setChurchName}
         />

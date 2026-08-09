@@ -18,9 +18,15 @@ export default function MemberLayout() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace('/(auth)/login'); return; }
-      supabase.from('users').select('roles').eq('id', user.id).single().then(({ data }) => {
+      supabase.from('users').select('roles, church_id').eq('id', user.id).single().then(({ data }) => {
         const roles: string[] = data?.roles ?? ['member'];
-        if (roles.includes('admin') || roles.includes('pastor')) {
+        // Defense in depth: this group must never render for a user without a
+        // community, regardless of how they got here (stale route, race
+        // condition, future bug elsewhere) — the root layout's redirect isn't
+        // the only gate.
+        if (!data?.church_id) {
+          router.replace('/(auth)/onboarding');
+        } else if (roles.includes('admin') || roles.includes('pastor')) {
           router.replace('/(admin)');
         } else if (roles.includes('cell_leader')) {
           router.replace('/(leader)');

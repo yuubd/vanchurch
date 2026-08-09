@@ -18,9 +18,9 @@ const strings = {
     password: '비밀번호',
     signIn: '로그인',
     logout: '로그아웃',
-    // Church setup
-    enterChurchName: '교회 이름을 입력하세요',
-    churchNamePlaceholder: '밴쿠버 한인 교회...',
+    // Community setup
+    enterChurchName: '공동체 이름을 입력하세요',
+    churchNamePlaceholder: '밴쿠버 한인 공동체...',
     getStarted: '시작하기',
     // Prayer
     noRequests: '기도제목이 없습니다',
@@ -105,7 +105,7 @@ const strings = {
     name: '이름',
     myRoles: '내 역할',
     myCell: '내 셀',
-    churchName: '교회',
+    churchName: '공동체',
     phoneRequired: '전화번호를 입력해주세요',
     otpRequired: '6자리 코드를 입력해주세요',
     otpInvalid: '잘못된 코드입니다. 다시 확인해주세요',
@@ -144,9 +144,9 @@ const strings = {
     password: 'Password',
     signIn: 'Sign in',
     logout: 'Logout',
-    // Church setup
-    enterChurchName: 'Enter your church name',
-    churchNamePlaceholder: 'Vancouver Korean Church...',
+    // Community setup
+    enterChurchName: 'Enter your community name',
+    churchNamePlaceholder: 'Vancouver Korean Community...',
     getStarted: 'Get started',
     // Prayer
     noRequests: 'No requests yet',
@@ -231,7 +231,7 @@ const strings = {
     name: 'Name',
     myRoles: 'My Roles',
     myCell: 'My Cell',
-    churchName: 'Church',
+    churchName: 'Community',
     phoneRequired: 'Please enter your phone number',
     otpRequired: 'Please enter the 6-digit code',
     otpInvalid: 'Invalid code. Please try again',

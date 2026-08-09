@@ -22,14 +22,14 @@ export default function AdminLayout() {
       if (!user) { router.replace('/(auth)/login'); return; }
       supabase.from('users').select('roles, church_id').eq('id', user.id).single().then(({ data }) => {
         const roles: string[] = data?.roles ?? [];
-        if (roles.includes('admin') || roles.includes('pastor')) {
+        if (!data?.church_id) {
+          router.replace('/(auth)/onboarding');
+        } else if (roles.includes('admin') || roles.includes('pastor')) {
           setIsPastor(roles.includes('pastor'));
           setAllowed(true);
-          if (data?.church_id) {
-            supabase.from('join_requests').select('id', { count: 'exact', head: true })
-              .eq('church_id', data.church_id).eq('status', 'pending')
-              .then(({ count }) => setPendingCount(count ?? 0));
-          }
+          supabase.from('join_requests').select('id', { count: 'exact', head: true })
+            .eq('church_id', data.church_id).eq('status', 'pending')
+            .then(({ count }) => setPendingCount(count ?? 0));
         } else if (roles.includes('cell_leader')) {
           router.replace('/(leader)');
         } else {

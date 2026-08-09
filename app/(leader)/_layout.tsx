@@ -18,9 +18,11 @@ export default function LeaderLayout() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace('/(auth)/login'); return; }
-      supabase.from('users').select('roles').eq('id', user.id).single().then(({ data }) => {
+      supabase.from('users').select('roles, church_id').eq('id', user.id).single().then(({ data }) => {
         const roles: string[] = data?.roles ?? [];
-        if (roles.includes('cell_leader')) {
+        if (!data?.church_id) {
+          router.replace('/(auth)/onboarding');
+        } else if (roles.includes('cell_leader')) {
           setAllowed(true);
         } else if (roles.includes('admin') || roles.includes('pastor')) {
           router.replace('/(admin)');
