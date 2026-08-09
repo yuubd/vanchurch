@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -7,6 +7,14 @@ export default function ProfileSetup() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const nameRef = useRef<TextInput>(null);
+
+  // autoFocus during the stack-push transition makes iOS render the placeholder
+  // with expanded letter spacing; focusing after the transition settles avoids it.
+  useEffect(() => {
+    const id = setTimeout(() => nameRef.current?.focus(), 350);
+    return () => clearTimeout(id);
+  }, []);
 
   async function save() {
     const trimmed = name.trim();
@@ -29,11 +37,11 @@ export default function ProfileSetup() {
         <Text style={styles.subtitle}>이름을 입력해주세요</Text>
         <Text style={styles.label}>이름</Text>
         <TextInput
+          ref={nameRef}
           style={styles.input}
           placeholder="홍길동"
           value={name}
           onChangeText={setName}
-          autoFocus
           returnKeyType="done"
           onSubmitEditing={save}
         />

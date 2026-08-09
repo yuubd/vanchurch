@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -9,6 +9,14 @@ export default function CreateCommunity() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const nameRef = useRef<TextInput>(null);
+
+  // autoFocus during the stack-push transition makes iOS render the placeholder
+  // with expanded letter spacing; focusing after the transition settles avoids it.
+  useEffect(() => {
+    const id = setTimeout(() => nameRef.current?.focus(), 350);
+    return () => clearTimeout(id);
+  }, []);
 
   async function create() {
     const trimmed = name.trim();
@@ -57,11 +65,11 @@ export default function CreateCommunity() {
 
         <Text style={styles.label}>공동체 이름 *</Text>
         <TextInput
+          ref={nameRef}
           style={styles.input}
           placeholder="VKPC 밴쿠버 한인 장로교회"
           value={name}
           onChangeText={setName}
-          autoFocus
           returnKeyType="done"
           onSubmitEditing={create}
         />
