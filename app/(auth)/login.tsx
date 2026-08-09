@@ -40,15 +40,25 @@ export default function LoginScreen() {
   const turnstileRef = useRef<TurnstileRef>(null);
 
   useEffect(() => {
-    tryBiometricLogin();
+    checkBiometricAvailable();
   }, []);
 
-  async function tryBiometricLogin() {
+  // Only checks whether a Face ID button should be shown — does NOT sign in.
+  // The stored session isn't scoped to any particular phone number, so
+  // auto-triggering Face ID on mount could silently sign a user into a
+  // different, stale account from a previous login on this device.
+  // Face ID must be an explicit tap (see the button below).
+  async function checkBiometricAvailable() {
     const enabled = await isBiometricEnabled();
     if (!enabled) return;
     const stored = await getStoredSession();
     if (!stored) return;
     setBiometricAvailable(true);
+  }
+
+  async function tryBiometricLogin() {
+    const stored = await getStoredSession();
+    if (!stored) return;
     const passed = await promptBiometric();
     if (!passed) return;
     const { error } = await supabase.auth.setSession(stored);
