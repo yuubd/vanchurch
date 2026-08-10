@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
@@ -16,9 +16,16 @@ export default function CellsScreen() {
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const addInputRef = useRef<TextInput>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => { loadData(); }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -37,11 +44,38 @@ export default function CellsScreen() {
   async function saveEdit() {
     if (!editing) return;
     setSaving(true);
+
+    const prevLeaderId = cells.find(c => c.id === editing.id)?.leader_id ?? null;
+    const newLeaderId = editing.leader_id ?? null;
+
     const { error } = await supabase.from('cells')
-      .update({ name: editing.name, leader_id: editing.leader_id, sub_leader_ids: editing.sub_leader_ids })
+      .update({ name: editing.name, leader_id: newLeaderId, sub_leader_ids: editing.sub_leader_ids })
       .eq('id', editing.id);
+    if (error) { setSaving(false); Alert.alert('Error', error.message); return; }
+
+    // Assigning a leader here only updated cells.leader_id — it must also grant
+    // the cell_leader role and set the user's cell_id, or their profile/tabs
+    // never reflect the change (this was previously out of sync).
+    if (newLeaderId && newLeaderId !== prevLeaderId) {
+      const { data: leaderUser } = await supabase.from('users').select('roles').eq('id', newLeaderId).single();
+      const roles = leaderUser?.roles ?? [];
+      const nextRoles = roles.includes('cell_leader') ? roles : [...roles, 'cell_leader'];
+      await supabase.from('users').update({ roles: nextRoles, cell_id: editing.id }).eq('id', newLeaderId);
+    }
+
+    // If the leader changed away from someone, revoke their cell_leader role
+    // only if they don't still lead a different cell.
+    if (prevLeaderId && prevLeaderId !== newLeaderId) {
+      const { data: stillLeading } = await supabase.from('cells').select('id').eq('leader_id', prevLeaderId).neq('id', editing.id);
+      if (!stillLeading?.length) {
+        const { data: prevUser } = await supabase.from('users').select('roles, cell_id').eq('id', prevLeaderId).single();
+        const nextRoles = (prevUser?.roles ?? []).filter((r: string) => r !== 'cell_leader');
+        const nextCellId = prevUser?.cell_id === editing.id ? null : prevUser?.cell_id;
+        await supabase.from('users').update({ roles: nextRoles, cell_id: nextCellId }).eq('id', prevLeaderId);
+      }
+    }
+
     setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
     setEditing(null);
     loadData();
   }
@@ -93,6 +127,7 @@ export default function CellsScreen() {
       <FlatList
         data={cells}
         keyExtractor={item => item.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.row}>
             <TouchableOpacity style={styles.rowContent} onPress={() => setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] })}>

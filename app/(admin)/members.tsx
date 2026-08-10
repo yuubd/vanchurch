@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -55,6 +55,7 @@ export default function MembersScreen() {
   const [newPhone, setNewPhone] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [addError, setAddError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const { t } = useTranslation();
 
   const isPastor = myRoles.includes('pastor');
@@ -89,6 +90,12 @@ export default function MembersScreen() {
     setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
     setJoinRequests((joinRes?.data ?? []) as any);
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   }
 
   async function approveRequest(req: JoinRequest) {
@@ -212,6 +219,7 @@ export default function MembersScreen() {
       <FlatList
         data={sorted}
         keyExtractor={item => item.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => setEditing({ ...item })}>
             <View>
