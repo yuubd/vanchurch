@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -44,8 +44,16 @@ export default function LeaderPrayers() {
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [loading, setLoading] = useState(false);
   const draftInputRef = useRef<TextInput>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const week = getWeekRange(weekOffset, lang);
+
+  async function onRefresh() {
+    if (!cellId || !myId) return;
+    setRefreshing(true);
+    await loadRequests(cellId, myId);
+    setRefreshing(false);
+  }
 
   useEffect(() => {
     init();
@@ -150,6 +158,7 @@ export default function LeaderPrayers() {
         data={requests}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>

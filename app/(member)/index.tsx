@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
@@ -17,8 +17,15 @@ export default function MemberHome() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [editDraft, setEditDraft] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadData(); }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -170,6 +177,7 @@ export default function MemberHome() {
         keyExtractor={() => ''}
         renderItem={null}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View>
             <Text style={styles.greeting}>{t('greeting')}, {name}{t('greetingSuffix')}</Text>

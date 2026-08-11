@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Switch, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -36,8 +36,16 @@ export default function PrayersScreen() {
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [togglingSharing, setTogglingSharing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const week = getWeekRange(weekOffset, lang);
+
+  async function onRefresh() {
+    if (!myId) return;
+    setRefreshing(true);
+    await loadRequests(myId);
+    setRefreshing(false);
+  }
 
   useEffect(() => {
     init();
@@ -146,6 +154,7 @@ export default function PrayersScreen() {
         data={requests}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>

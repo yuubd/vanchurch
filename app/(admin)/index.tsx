@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -25,8 +25,15 @@ export default function AdminHome() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const draftInputRef = useRef<TextInput>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadData(); }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -87,7 +94,11 @@ export default function AdminHome() {
 
   return (
     <View style={styles.root}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.topRow}>
           <View />
           <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push('/(admin)/profile')}>

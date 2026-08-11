@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -27,12 +27,20 @@ export default function LeaderMembers() {
   const [cellName, setCellName] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const sunday = getThisSunday(weekOffset);
   const dateStr = sunday.toISOString().split('T')[0];
 
   useEffect(() => { loadCell(); }, []);
   useEffect(() => { if (cellId) loadAttendance(); }, [cellId, weekOffset]);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadCell();
+    if (cellId) await loadAttendance();
+    setRefreshing(false);
+  }
 
   async function loadCell() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -97,6 +105,7 @@ export default function LeaderMembers() {
         data={members}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => toggle(item.id)} activeOpacity={0.7}>
             <View>
