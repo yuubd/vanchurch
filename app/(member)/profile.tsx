@@ -102,15 +102,15 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t('churchName')}</Text>
-            <View style={styles.churchRow}>
-              <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>{t('churchName')}</Text>
               {!!profile.churches?.name && (
                 <TouchableOpacity onPress={confirmLeave} hitSlop={8}>
                   <Text style={styles.leaveLink}>{t('leave')}</Text>
                 </TouchableOpacity>
               )}
             </View>
+            <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
           </View>
 
           <View style={styles.section}>
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
-  churchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   leaveLink: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
