@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
@@ -67,6 +67,24 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
+  function confirmLeave() {
+    Alert.alert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
+    ]);
+  }
+
+  async function leaveCommunity() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from('users')
+      .update({ church_id: null, cell_id: null, roles: ['member'] })
+      .eq('id', user.id);
+    if (error) { Alert.alert('오류', error.message); return; }
+    router.replace('/(auth)/onboarding');
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
@@ -132,6 +150,10 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      <TouchableOpacity style={styles.leaveBtn} onPress={confirmLeave}>
+        <Text style={styles.leaveText}>{t('leaveCommunity')}</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
         <Text style={styles.logoutText}>{t('logout')}</Text>
       </TouchableOpacity>
@@ -158,6 +180,8 @@ const styles = StyleSheet.create({
   biometricRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   biometricLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
   biometricSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  leaveBtn: { marginHorizontal: 20, marginTop: 20, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB' },
+  leaveText: { color: '#6B7280', fontSize: 15, fontWeight: '600' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });

@@ -18,6 +18,9 @@ const strings = {
     password: '비밀번호',
     signIn: '로그인',
     logout: '로그아웃',
+    leaveCommunity: '공동체 나가기',
+    leaveConfirmTitle: '공동체를 나가시겠어요?',
+    leaveConfirmMsg: '내 기도제목과 셀 정보에 더 이상 접근할 수 없게 됩니다. 다시 참여하려면 새로 신청해야 해요.',
     // Community setup
     enterChurchName: '공동체 이름을 입력하세요',
     churchNamePlaceholder: '밴쿠버 한인 공동체...',
@@ -144,6 +147,9 @@ const strings = {
     password: 'Password',
     signIn: 'Sign in',
     logout: 'Logout',
+    leaveCommunity: 'Leave community',
+    leaveConfirmTitle: 'Leave this community?',
+    leaveConfirmMsg: "You'll lose access to your prayer requests and cell info here. You'll need to request to join again to come back.",
     // Community setup
     enterChurchName: 'Enter your community name',
     churchNamePlaceholder: 'Vancouver Korean Community...',
