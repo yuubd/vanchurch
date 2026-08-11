@@ -107,7 +107,7 @@ export default function ProfileScreen() {
               <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
               {!!profile.churches?.name && (
                 <TouchableOpacity onPress={confirmLeave} hitSlop={8}>
-                  <Text style={styles.leaveLink}>{t('leaveCommunity')}</Text>
+                  <Text style={styles.leaveLink}>{t('leave')}</Text>
                 </TouchableOpacity>
               )}
             </View>
