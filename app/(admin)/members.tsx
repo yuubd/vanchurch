@@ -79,7 +79,7 @@ export default function MembersScreen() {
     if (churchId) {
       queries.push(
         supabase.from('join_requests')
-          .select('id, user_id, created_at, users!join_requests_user_id_fkey(name)')
+          .select('id, user_id, created_at, users!join_requests_user_id_users_fkey(name)')
           .eq('church_id', churchId)
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
