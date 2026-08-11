@@ -103,7 +103,14 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <Text style={styles.label}>{t('churchName')}</Text>
-            <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
+            <View style={styles.churchRow}>
+              <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
+              {!!profile.churches?.name && (
+                <TouchableOpacity onPress={confirmLeave} hitSlop={8}>
+                  <Text style={styles.leaveLink}>{t('leaveCommunity')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -150,10 +157,6 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <TouchableOpacity style={styles.leaveBtn} onPress={confirmLeave}>
-        <Text style={styles.leaveText}>{t('leaveCommunity')}</Text>
-      </TouchableOpacity>
-
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
         <Text style={styles.logoutText}>{t('logout')}</Text>
       </TouchableOpacity>
@@ -170,6 +173,8 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
+  churchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  leaveLink: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   langToggle: { flexDirection: 'row', gap: 8 },
@@ -180,8 +185,6 @@ const styles = StyleSheet.create({
   biometricRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   biometricLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
   biometricSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  leaveBtn: { marginHorizontal: 20, marginTop: 20, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB' },
-  leaveText: { color: '#6B7280', fontSize: 15, fontWeight: '600' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });
