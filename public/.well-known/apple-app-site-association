@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "4T2S82MLGH.com.vanchurch.app",
+        "paths": ["/join/*"]
+      }
+    ]
+  }
+}
