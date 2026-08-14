@@ -21,11 +21,27 @@ export default function ProfileSetup() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('users').update({ name: trimmed }).eq('id', user?.id);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       Alert.alert('오류', error.message);
-    } else {
+      return;
+    }
+
+    // Members pre-added by an admin/cell leader already have a church_id — skip onboarding
+    // (community pick/create) and go straight to their role home.
+    const { data: profile } = await supabase.from('users').select('church_id, roles').eq('id', user?.id).single();
+    setLoading(false);
+    if (!profile?.church_id) {
       router.replace('/(auth)/onboarding');
+      return;
+    }
+    const roles: string[] = profile.roles ?? ['member'];
+    if (roles.includes('admin') || roles.includes('pastor')) {
+      router.replace('/(admin)');
+    } else if (roles.includes('cell_leader')) {
+      router.replace('/(leader)');
+    } else {
+      router.replace('/(member)');
     }
   }
 

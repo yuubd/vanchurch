@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -28,6 +28,12 @@ export default function LeaderMembers() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
+  const [addError, setAddError] = useState('');
+  const nameInputRef = useRef<TextInput>(null);
 
   const sunday = getThisSunday(weekOffset);
   const dateStr = sunday.toISOString().split('T')[0];
@@ -76,25 +82,54 @@ export default function LeaderMembers() {
     const records = members.map(m => ({
       user_id: m.id, cell_id: cellId, meeting_date: dateStr, present: m.present,
     }));
-    await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
+    const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
+    if (error) {
+      setSaving(false);
+      Alert.alert('오류', error.message);
+      return;
+    }
+    await loadAttendance();
     setSaving(false);
   }
 
   const presentCount = members.filter(m => m.present).length;
+
+  async function addMember() {
+    if (newPhone.replace(/\D/g, '').length < 10) return;
+    setAddingMember(true);
+    setAddError('');
+    const { error } = await supabase.functions.invoke('add-member', {
+      body: { name: newName.trim(), phone: newPhone },
+    });
+    setAddingMember(false);
+    if (error) {
+      const body = await (error as any).context?.json?.().catch(() => null);
+      setAddError(body?.error ?? '멤버 추가에 실패했습니다');
+      return;
+    }
+    setShowAddMember(false);
+    setNewName('');
+    setNewPhone('');
+    loadCell();
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('attendance')}</Text>
         {cellName ? <Text style={styles.cellBadge}>{cellName}</Text> : null}
+        <View style={styles.headerSpacer} />
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
+          <Text style={styles.addBtnText}>+</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.dateNav}>
-        <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn}>
+        <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn} hitSlop={12}>
           <Ionicons name="chevron-back" size={20} color="#374151" />
         </TouchableOpacity>
         <Text style={styles.dateLabel}>{getDateLabel(sunday, lang)}</Text>
-        <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0}>
+        <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0} hitSlop={12}>
           <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? '#D1D5DB' : '#374151'} />
         </TouchableOpacity>
       </View>
@@ -124,6 +159,40 @@ export default function LeaderMembers() {
           <Text style={styles.saveBtnText}>{saving ? t('saving') : t('saveBtn')}</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => nameInputRef.current?.focus()}>
+        <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Text style={styles.modalTitle}>{t('addMember')}</Text>
+          <Text style={styles.modalLabel}>{t('nameOptional')}</Text>
+          <TextInput
+            ref={nameInputRef}
+            style={styles.textInput}
+            placeholder={t('namePlaceholder')}
+            value={newName}
+            onChangeText={setNewName}
+          />
+          <Text style={styles.modalLabel}>{t('phoneNumber')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="604-000-0000"
+            keyboardType="phone-pad"
+            value={newPhone}
+            onChangeText={setNewPhone}
+          />
+          <Text style={styles.addHint}>{t('addMemberHint')}</Text>
+          {!!addError && <Text style={styles.addError}>{addError}</Text>}
+          <TouchableOpacity
+            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.saveBtnDisabled]}
+            onPress={addMember}
+            disabled={newPhone.replace(/\D/g, '').length < 10 || addingMember}
+          >
+            <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -133,6 +202,17 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 16 },
   title: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
   cellBadge: { fontSize: 13, color: '#2563EB', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, overflow: 'hidden' },
+  headerSpacer: { flex: 1 },
+  addBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
+  addBtnText: { fontSize: 22, color: '#fff', lineHeight: 26 },
+  modal: { flex: 1, padding: 24, paddingTop: 48 },
+  modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },
+  modalLabel: { fontSize: 14, color: '#666', marginTop: 16, marginBottom: 8 },
+  textInput: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12, padding: 14, fontSize: 16, color: '#111827', backgroundColor: '#F9FAFB', marginBottom: 16 },
+  addHint: { fontSize: 13, color: '#9CA3AF', marginBottom: 8, lineHeight: 20 },
+  addError: { fontSize: 13, color: '#DC2626', marginBottom: 12 },
+  cancelBtn: { alignItems: 'center', marginTop: 16 },
+  cancelText: { color: '#888', fontSize: 15 },
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   navBtn: { padding: 4 },
   dateLabel: { fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 140, textAlign: 'center' },

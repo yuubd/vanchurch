@@ -110,7 +110,13 @@ export default function MembersScreen() {
     const records = cellMembers.map(m => ({
       user_id: m.id, cell_id: myCellId, meeting_date: dateStr, present: !!attendanceMap[m.id],
     }));
-    await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
+    const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
+    if (error) {
+      setAttSaving(false);
+      Alert.alert('오류', error.message);
+      return;
+    }
+    await loadAttendance();
     setAttSaving(false);
   }
 
@@ -167,27 +173,18 @@ export default function MembersScreen() {
     loadData();
   }
 
-  function toE164(raw: string): string {
-    const digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('1') && digits.length === 11) return '+' + digits;
-    return '+1' + digits;
-  }
-
   async function addMember() {
-    if (!newName.trim() || newPhone.replace(/\D/g, '').length < 10) return;
+    if (newPhone.replace(/\D/g, '').length < 10) return;
     if (!myChurchId) return;
     setAddingMember(true);
     setAddError('');
-    const phone = toE164(newPhone);
-    const { error } = await supabase.from('users').insert({
-      name: newName.trim(),
-      phone: phone.replace('+', ''),
-      church_id: myChurchId,
-      roles: ['member'],
+    const { error } = await supabase.functions.invoke('add-member', {
+      body: { name: newName.trim(), phone: newPhone },
     });
     setAddingMember(false);
     if (error) {
-      setAddError(error.message.includes('unique') ? '이미 등록된 번호입니다' : error.message);
+      const body = await (error as any).context?.json?.().catch(() => null);
+      setAddError(body?.error ?? '멤버 추가에 실패했습니다');
       return;
     }
     setShowAddMember(false);
@@ -267,11 +264,11 @@ export default function MembersScreen() {
       {view === 'attendance' && myCellId ? (
         <>
           <View style={styles.dateNav}>
-            <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn}>
+            <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn} hitSlop={12}>
               <Ionicons name="chevron-back" size={20} color="#374151" />
             </TouchableOpacity>
             <Text style={styles.dateLabel}>{getDateLabel(sunday, lang)}{cellName ? ` · ${cellName}` : ''}</Text>
-            <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0}>
+            <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0} hitSlop={12}>
               <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? '#D1D5DB' : '#374151'} />
             </TouchableOpacity>
           </View>
@@ -345,7 +342,7 @@ export default function MembersScreen() {
       <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => nameInputRef.current?.focus()}>
         <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Text style={styles.modalTitle}>{t('addMember')}</Text>
-          <Text style={styles.label}>{t('name')}</Text>
+          <Text style={styles.label}>{t('nameOptional')}</Text>
           <TextInput
             ref={nameInputRef}
             style={styles.textInput}
@@ -364,9 +361,9 @@ export default function MembersScreen() {
           <Text style={styles.addHint}>{t('addMemberHint')}</Text>
           {!!addError && <Text style={styles.addError}>{addError}</Text>}
           <TouchableOpacity
-            style={[styles.saveBtn, (!newName.trim() || newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
             onPress={addMember}
-            disabled={!newName.trim() || newPhone.replace(/\D/g, '').length < 10 || addingMember}
+            disabled={newPhone.replace(/\D/g, '').length < 10 || addingMember}
           >
             <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
           </TouchableOpacity>
