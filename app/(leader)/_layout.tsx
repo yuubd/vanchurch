@@ -47,8 +47,8 @@ export default function LeaderLayout() {
           borderTopWidth: 0.5,
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',
-          height: 56 + insets.bottom,
-          paddingBottom: insets.bottom,
+          height: 56 + Math.max(insets.bottom, 12),
+          paddingBottom: Math.max(insets.bottom, 12),
         },
         tabBarItemStyle: {
           paddingTop: 8,
