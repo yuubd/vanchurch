@@ -27,6 +27,7 @@ export default function LeaderMembers() {
   const [cellName, setCellName] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newName, setNewName] = useState('');
@@ -39,7 +40,7 @@ export default function LeaderMembers() {
   const dateStr = sunday.toISOString().split('T')[0];
 
   useEffect(() => { loadCell(); }, []);
-  useEffect(() => { if (cellId) loadAttendance(); }, [cellId, weekOffset]);
+  useEffect(() => { if (cellId) loadAttendance(); setSaved(false); }, [cellId, weekOffset]);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -74,11 +75,13 @@ export default function LeaderMembers() {
 
   function toggle(id: string) {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, present: !m.present } : m));
+    setSaved(false);
   }
 
   async function save() {
     if (!cellId) return;
     setSaving(true);
+    setSaved(false);
     const records = members.map(m => ({
       user_id: m.id, cell_id: cellId, meeting_date: dateStr, present: m.present,
     }));
@@ -90,6 +93,7 @@ export default function LeaderMembers() {
     }
     await loadAttendance();
     setSaving(false);
+    setSaved(true);
   }
 
   const presentCount = members.filter(m => m.present).length;
@@ -156,7 +160,7 @@ export default function LeaderMembers() {
 
       <View style={styles.footer}>
         <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={save} disabled={saving}>
-          <Text style={styles.saveBtnText}>{saving ? t('saving') : t('saveBtn')}</Text>
+          <Text style={styles.saveBtnText}>{saving ? t('saving') : saved ? t('saved') : t('saveBtn')}</Text>
         </TouchableOpacity>
       </View>
 

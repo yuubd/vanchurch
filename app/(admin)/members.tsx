@@ -78,6 +78,7 @@ export default function MembersScreen() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, boolean>>({});
   const [attSaving, setAttSaving] = useState(false);
+  const [attSaved, setAttSaved] = useState(false);
 
   const isPastor = myRoles.includes('pastor');
 
@@ -88,7 +89,7 @@ export default function MembersScreen() {
   const presentCount = cellMembers.filter(m => attendanceMap[m.id]).length;
 
   useEffect(() => { loadData(); }, []);
-  useEffect(() => { if (view === 'attendance' && myCellId) loadAttendance(); }, [view, myCellId, weekOffset]);
+  useEffect(() => { if (view === 'attendance' && myCellId) loadAttendance(); setAttSaved(false); }, [view, myCellId, weekOffset]);
 
   async function loadAttendance() {
     if (!myCellId) return;
@@ -102,11 +103,13 @@ export default function MembersScreen() {
 
   function toggleAttendance(id: string) {
     setAttendanceMap(prev => ({ ...prev, [id]: !prev[id] }));
+    setAttSaved(false);
   }
 
   async function saveAttendance() {
     if (!myCellId) return;
     setAttSaving(true);
+    setAttSaved(false);
     const records = cellMembers.map(m => ({
       user_id: m.id, cell_id: myCellId, meeting_date: dateStr, present: !!attendanceMap[m.id],
     }));
@@ -118,6 +121,7 @@ export default function MembersScreen() {
     }
     await loadAttendance();
     setAttSaving(false);
+    setAttSaved(true);
   }
 
   async function loadData() {
@@ -289,7 +293,7 @@ export default function MembersScreen() {
             ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
           />
           <TouchableOpacity style={[styles.saveBtn, styles.attSaveBtn, attSaving && styles.disabled]} onPress={saveAttendance} disabled={attSaving}>
-            <Text style={styles.saveBtnText}>{attSaving ? t('saving') : t('saveBtn')}</Text>
+            <Text style={styles.saveBtnText}>{attSaving ? t('saving') : attSaved ? t('saved') : t('saveBtn')}</Text>
           </TouchableOpacity>
         </>
       ) : (
