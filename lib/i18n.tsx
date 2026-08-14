@@ -59,6 +59,7 @@ const strings = {
     attendanceSummary: '명 출석',
     saving: '저장 중...',
     saveBtn: '저장하기',
+    saved: '저장됨 ✓',
     // Admin home
     quickMenu: '빠른 메뉴',
     thisWeekPrayers: '이번 주 %건',
@@ -190,6 +191,7 @@ const strings = {
     attendanceSummary: ' present',
     saving: 'Saving...',
     saveBtn: 'Save',
+    saved: 'Saved ✓',
     // Admin home
     quickMenu: 'Quick Menu',
     thisWeekPrayers: '% this week',
