@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
@@ -105,13 +106,13 @@ export default function MembersScreen() {
       supabase.from('join_requests').update({ status: 'approved' }).eq('id', req.id),
       supabase.from('users').update({ church_id: myChurchId, roles: ['member'] }).eq('id', req.user_id),
     ]);
-    if (e1 || e2) { Alert.alert('오류', friendlyError(e1 ?? e2)); return; }
+    if (e1 || e2) { showAlert('오류', friendlyError(e1 ?? e2)); return; }
     loadData();
   }
 
   async function rejectRequest(req: JoinRequest) {
     const { error } = await supabase.from('join_requests').update({ status: 'rejected' }).eq('id', req.id);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     loadData();
   }
 
@@ -142,7 +143,7 @@ export default function MembersScreen() {
       .update({ roles: editing.roles, cell_id: editing.cell_id })
       .eq('id', editing.id);
     setSaving(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     setEditing(null);
     loadData();
   }

@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, RefreshControl } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Leader = { id: string; name: string };
 type Cell = { id: string; name: string; leader_id: string | null; sub_leader_ids: string[]; leader: { name: string } | null };
@@ -64,7 +65,7 @@ export default function CellsScreen() {
     const { error } = await supabase.from('cells')
       .update({ name: editing.name, leader_id: newLeaderId, sub_leader_ids: editing.sub_leader_ids })
       .eq('id', editing.id);
-    if (error) { setSaving(false); Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { setSaving(false); showAlert('오류', friendlyError(error)); return; }
 
     // Assigning a leader here only updated cells.leader_id — it must also grant
     // the cell_leader role and set the user's cell_id, or their profile/tabs
@@ -137,7 +138,7 @@ export default function CellsScreen() {
     const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     const { error } = await supabase.from('cells').insert({ name: newName.trim(), church_id: me?.church_id });
     setSaving(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     setAdding(false);
     setNewName('');
     loadData();

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 function getDateLabel(date: Date, lang: string) {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
@@ -85,7 +86,7 @@ export default function AdminAttendance() {
     const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
     if (error) {
       setSaving(false);
-      Alert.alert('오류', friendlyError(error));
+      showAlert('오류', friendlyError(error));
       return;
     }
     await loadAttendance();
