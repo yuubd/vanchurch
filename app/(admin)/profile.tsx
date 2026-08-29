@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 import { clearBiometrics } from '../../lib/biometrics';
+import { friendlyError } from '../../lib/friendlyError';
 
-type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
+type Profile = { name: string; roles: string[]; church_id: string | null; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
 
 function formatPhone(raw: string | null): string {
   if (!raw) return '—';
@@ -26,6 +27,8 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [copied, setCopied] = useState(false);
+  const [destroying, setDestroying] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
@@ -35,10 +38,62 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase
       .from('users')
-      .select('name, roles, cells!users_cell_id_fkey(name), churches(name, invite_token)')
+      .select('name, roles, church_id, cells!users_cell_id_fkey(name), churches(name, invite_token)')
       .eq('id', user!.id)
       .single();
     setProfile({ ...(data as any), phone: user?.phone ?? null });
+  }
+
+  function confirmDestroy() {
+    Alert.alert(
+      t('destroyCommunityTitle'),
+      t('destroyCommunityMsg'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('destroyCommunity'), style: 'destructive', onPress: destroyCommunity },
+      ]
+    );
+  }
+
+  async function destroyCommunity() {
+    if (!profile?.church_id) return;
+    setDestroying(true);
+    const { error } = await supabase.rpc('destroy_church', { target_church_id: profile.church_id });
+    setDestroying(false);
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    router.replace('/(auth)/onboarding');
+  }
+
+  async function confirmLeave() {
+    if (profile?.roles.includes('admin') && profile.church_id) {
+      const { count } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('church_id', profile.church_id)
+        .neq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .contains('roles', ['admin']);
+      if (!count) {
+        Alert.alert(t('lastAdminTitle'), t('lastAdminMsg'));
+        return;
+      }
+    }
+    Alert.alert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
+    ]);
+  }
+
+  async function leaveCommunity() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setLeaving(true);
+    const { error } = await supabase
+      .from('users')
+      .update({ church_id: null, cell_id: null, roles: ['member'] })
+      .eq('id', user.id);
+    setLeaving(false);
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    router.replace('/(auth)/onboarding');
   }
 
   function inviteLink() {
@@ -78,7 +133,14 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t('churchName')}</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>{t('churchName')}</Text>
+              {!!profile.churches?.name && (
+                <TouchableOpacity onPress={confirmLeave} disabled={leaving} hitSlop={8}>
+                  <Text style={styles.leaveLink}>{leaving ? '...' : t('leave')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
           </View>
 
@@ -125,6 +187,12 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
+
+          {profile.roles.includes('pastor') && (
+            <TouchableOpacity style={styles.destroyBtn} onPress={confirmDestroy} disabled={destroying}>
+              <Text style={styles.destroyText}>{destroying ? '...' : t('destroyCommunity')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -144,6 +212,8 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  leaveLink: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   langToggle: { flexDirection: 'row', gap: 8 },
@@ -158,6 +228,8 @@ const styles = StyleSheet.create({
   linkBtnText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
   shareBtn: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   shareBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  destroyBtn: { marginTop: 24, borderWidth: 1, borderColor: '#DC2626', borderRadius: 12, padding: 14, alignItems: 'center' },
+  destroyText: { color: '#DC2626', fontSize: 14, fontWeight: '600' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });

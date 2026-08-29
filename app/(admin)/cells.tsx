@@ -4,13 +4,17 @@ import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
+import { friendlyError } from '../../lib/friendlyError';
 
 type Leader = { id: string; name: string };
 type Cell = { id: string; name: string; leader_id: string | null; sub_leader_ids: string[]; leader: { name: string } | null };
+type Member = { id: string; name: string; cell_id: string | null };
 
 export default function CellsScreen() {
   const [cells, setCells] = useState<Cell[]>([]);
   const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Cell | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -40,12 +44,14 @@ export default function CellsScreen() {
     const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     const churchId = me?.church_id ?? '';
 
-    const [{ data: cellData }, { data: leaderData }] = await Promise.all([
+    const [{ data: cellData }, { data: leaderData }, { data: memberData }] = await Promise.all([
       supabase.from('cells').select('id, name, leader_id, sub_leader_ids, leader:users!cells_leader_id_fkey(name)').eq('church_id', churchId).order('name'),
       supabase.from('users').select('id, name').eq('church_id', churchId).overlaps('roles', ['cell_leader', 'admin', 'pastor']).order('name'),
+      supabase.from('users').select('id, name, cell_id').eq('church_id', churchId).order('name'),
     ]);
     setCells((cellData ?? []) as any);
     setLeaders(leaderData ?? []);
+    setMembers(memberData ?? []);
   }
 
   async function saveEdit() {
@@ -58,7 +64,7 @@ export default function CellsScreen() {
     const { error } = await supabase.from('cells')
       .update({ name: editing.name, leader_id: newLeaderId, sub_leader_ids: editing.sub_leader_ids })
       .eq('id', editing.id);
-    if (error) { setSaving(false); Alert.alert('Error', error.message); return; }
+    if (error) { setSaving(false); Alert.alert('오류', friendlyError(error)); return; }
 
     // Assigning a leader here only updated cells.leader_id — it must also grant
     // the cell_leader role and set the user's cell_id, or their profile/tabs
@@ -82,16 +88,32 @@ export default function CellsScreen() {
       }
     }
 
+    // Apply member checklist changes: assign newly-checked members to this
+    // cell, unassign previously-assigned members that got unchecked.
+    const originallyIn = new Set(members.filter(m => m.cell_id === editing.id).map(m => m.id));
+    const toAdd = [...memberIds].filter(id => !originallyIn.has(id));
+    const toRemove = [...originallyIn].filter(id => !memberIds.has(id));
+    if (toAdd.length) await supabase.from('users').update({ cell_id: editing.id }).in('id', toAdd);
+    if (toRemove.length) await supabase.from('users').update({ cell_id: null }).in('id', toRemove);
+
     setSaving(false);
     setEditing(null);
     loadData();
+  }
+
+  function toggleMember(id: string) {
+    setMemberIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   async function addMemberToCell() {
     if (!editing || newMemberPhone.replace(/\D/g, '').length < 10) return;
     setAddingMember(true);
     setAddMemberError('');
-    const { error } = await supabase.functions.invoke('add-member', {
+    const { data, error } = await supabase.functions.invoke('add-member', {
       body: { name: newMemberName.trim(), phone: newMemberPhone, cellId: editing.id },
     });
     setAddingMember(false);
@@ -100,6 +122,7 @@ export default function CellsScreen() {
       setAddMemberError(body?.error ?? '멤버 추가에 실패했습니다');
       return;
     }
+    if (data?.id) setMemberIds(prev => new Set(prev).add(data.id));
     setShowAddMember(false);
     setNewMemberName('');
     setNewMemberPhone('');
@@ -114,7 +137,7 @@ export default function CellsScreen() {
     const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     const { error } = await supabase.from('cells').insert({ name: newName.trim(), church_id: me?.church_id });
     setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
     setAdding(false);
     setNewName('');
     loadData();
@@ -156,7 +179,10 @@ export default function CellsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.rowContent} onPress={() => setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] })}>
+            <TouchableOpacity style={styles.rowContent} onPress={() => {
+              setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] });
+              setMemberIds(new Set(members.filter(m => m.cell_id === item.id).map(m => m.id)));
+            }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{t('cellLeader')}: {item.leader?.name ?? t('none')}</Text>
               {!!subLeaderNames(item) && (
@@ -205,6 +231,20 @@ export default function CellsScreen() {
               >
                 <Text style={[styles.subLabel, active && styles.subLabelActive, isLeader && styles.subLabelDisabled]}>{l.name}</Text>
                 <Text style={styles.subCheck}>{active ? '✓' : ''}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <Text style={styles.label}>{t('members')}</Text>
+          {[...members].sort((a, b) => a.name.localeCompare(b.name)).map(m => {
+            const checked = memberIds.has(m.id);
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.subRow, checked && styles.subRowActive]}
+                onPress={() => toggleMember(m.id)}
+              >
+                <Text style={[styles.subLabel, checked && styles.subLabelActive]}>{m.name}</Text>
+                <Text style={styles.subCheck}>{checked ? '✓' : ''}</Text>
               </TouchableOpacity>
             );
           })}

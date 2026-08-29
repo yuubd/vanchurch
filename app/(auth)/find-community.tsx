@@ -3,21 +3,49 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } 
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
+import { friendlyError } from '../../lib/friendlyError';
 
 type Church = { id: string; name: string };
+type PendingRequest = { id: string; churches: { name: string } | null };
 
 export default function FindCommunity() {
   const [churches, setChurches] = useState<Church[]>([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Church | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<PendingRequest | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const router = useRouter();
   const searchReady = useDelayedMount();
 
   useEffect(() => {
     supabase.from('churches').select('id, name').eq('is_public', true).order('name')
       .then(({ data }) => setChurches((data ?? []) as Church[]));
+    loadPending();
   }, []);
+
+  async function loadPending() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('join_requests')
+      .select('id, churches(name)')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setPending(data as any);
+  }
+
+  async function cancelPending() {
+    if (!pending) return;
+    setCancelling(true);
+    const { error } = await supabase.from('join_requests').delete().eq('id', pending.id);
+    setCancelling(false);
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    setPending(null);
+  }
 
   const filtered = query.trim()
     ? churches.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
@@ -34,7 +62,7 @@ export default function FindCommunity() {
       { onConflict: 'user_id,church_id', ignoreDuplicates: true }
     );
     setLoading(false);
-    if (error) { Alert.alert('오류', error.message); return; }
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
     router.replace({ pathname: '/(auth)/pending', params: { churchName: selected.name } });
   }
 
@@ -47,6 +75,18 @@ export default function FindCommunity() {
         <Text style={styles.title}>공동체 찾기</Text>
         <Text style={styles.subtitle}>참여할 공동체를 검색하세요</Text>
       </View>
+
+      {pending && (
+        <View style={styles.pendingBanner}>
+          <Text style={styles.pendingText}>
+            <Text style={styles.pendingChurch}>{pending.churches?.name ?? ''}</Text>
+            {'에 참여 요청을 보냈어요'}
+          </Text>
+          <TouchableOpacity onPress={cancelPending} disabled={cancelling} hitSlop={8}>
+            <Text style={styles.pendingCancel}>{cancelling ? '...' : '취소'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {searchReady ? (
         <TextInput
@@ -85,9 +125,9 @@ export default function FindCommunity() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.btn, (!selected || loading) && styles.btnDisabled]}
+          style={[styles.btn, (!selected || loading || !!pending) && styles.btnDisabled]}
           onPress={requestJoin}
-          disabled={!selected || loading}
+          disabled={!selected || loading || !!pending}
         >
           <Text style={styles.btnText}>{loading ? '...' : '참여 요청 / Request to join'}</Text>
         </TouchableOpacity>
@@ -104,6 +144,10 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '900', color: '#111827', marginBottom: 6, letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: '#9CA3AF' },
   search: { marginHorizontal: 24, borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 14, fontSize: 16, color: '#111827', backgroundColor: '#F9FAFB', marginBottom: 8 },
+  pendingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 24, marginBottom: 12, padding: 14, borderRadius: 12, backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
+  pendingText: { flex: 1, fontSize: 13, color: '#92400E' },
+  pendingChurch: { fontWeight: '700' },
+  pendingCancel: { fontSize: 13, fontWeight: '700', color: '#DC2626', marginLeft: 12 },
   list: { paddingHorizontal: 24, paddingBottom: 20 },
   churchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, marginBottom: 2 },
   churchRowSelected: { backgroundColor: '#EFF6FF' },

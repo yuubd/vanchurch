@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Ale
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { friendlyError } from '../../lib/friendlyError';
 
 function getDateLabel(date: Date, lang: string) {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
@@ -84,7 +85,7 @@ export default function AdminAttendance() {
     const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
     if (error) {
       setSaving(false);
-      Alert.alert('오류', error.message);
+      Alert.alert('오류', friendlyError(error));
       return;
     }
     await loadAttendance();

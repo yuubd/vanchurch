@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Mod
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { friendlyError } from '../../lib/friendlyError';
 
 type Member = { id: string; name: string; present: boolean };
 
@@ -88,7 +89,7 @@ export default function LeaderMembers() {
     const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
     if (error) {
       setSaving(false);
-      Alert.alert('오류', error.message);
+      Alert.alert('오류', friendlyError(error));
       return;
     }
     await loadAttendance();
