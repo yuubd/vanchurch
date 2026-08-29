@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, Alert, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
@@ -17,9 +18,15 @@ export default function CellsScreen() {
   const [saving, setSaving] = useState(false);
   const addInputRef = useRef<TextInput>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
+  const [addMemberError, setAddMemberError] = useState('');
+  const memberNameRef = useRef<TextInput>(null);
   const { t } = useTranslation();
 
-  useEffect(() => { loadData(); }, []);
+  useFocusEffect(useCallback(() => { loadData(); }, []));
 
   async function onRefresh() {
     setRefreshing(true);
@@ -77,6 +84,25 @@ export default function CellsScreen() {
 
     setSaving(false);
     setEditing(null);
+    loadData();
+  }
+
+  async function addMemberToCell() {
+    if (!editing || newMemberPhone.replace(/\D/g, '').length < 10) return;
+    setAddingMember(true);
+    setAddMemberError('');
+    const { error } = await supabase.functions.invoke('add-member', {
+      body: { name: newMemberName.trim(), phone: newMemberPhone, cellId: editing.id },
+    });
+    setAddingMember(false);
+    if (error) {
+      const body = await (error as any).context?.json?.().catch(() => null);
+      setAddMemberError(body?.error ?? '멤버 추가에 실패했습니다');
+      return;
+    }
+    setShowAddMember(false);
+    setNewMemberName('');
+    setNewMemberPhone('');
     loadData();
   }
 
@@ -182,6 +208,9 @@ export default function CellsScreen() {
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity style={styles.addMemberLink} onPress={() => { setAddMemberError(''); setShowAddMember(true); }}>
+            <Text style={styles.addMemberLinkText}>{t('addMember')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveEdit} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? '...' : t('save')}</Text>
           </TouchableOpacity>
@@ -189,6 +218,41 @@ export default function CellsScreen() {
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </ScrollView>
+      </Modal>
+
+      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => memberNameRef.current?.focus()}>
+        <View style={styles.modal}>
+          <Text style={styles.modalTitle}>{t('addMember')}</Text>
+          <Text style={styles.label}>{t('nameOptional')}</Text>
+          <TextInput
+            ref={memberNameRef}
+            style={styles.input}
+            placeholder={t('namePlaceholder')}
+            placeholderTextColor="#9CA3AF"
+            value={newMemberName}
+            onChangeText={setNewMemberName}
+          />
+          <Text style={styles.label}>{t('phoneNumber')}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="604-000-0000"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="phone-pad"
+            value={newMemberPhone}
+            onChangeText={setNewMemberPhone}
+          />
+          {!!addMemberError && <Text style={styles.addMemberError}>{addMemberError}</Text>}
+          <TouchableOpacity
+            style={[styles.saveBtn, (newMemberPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+            onPress={addMemberToCell}
+            disabled={newMemberPhone.replace(/\D/g, '').length < 10 || addingMember}
+          >
+            <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
+          </TouchableOpacity>
+        </View>
       </Modal>
 
       <Modal visible={!!confirmDeleteId} animationType="fade" transparent>
@@ -212,7 +276,7 @@ export default function CellsScreen() {
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>{t('addCell')}</Text>
           <Text style={styles.label}>{t('cellName')}</Text>
-          <TextInput ref={addInputRef} style={styles.input} value={newName} onChangeText={setNewName} placeholder={t('cellNamePlaceholder')} />
+          <TextInput ref={addInputRef} style={styles.input} value={newName} onChangeText={setNewName} placeholder={t('cellNamePlaceholder')} placeholderTextColor="#9CA3AF" />
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={addCell} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? '...' : t('add')}</Text>
           </TouchableOpacity>
@@ -246,6 +310,9 @@ const styles = StyleSheet.create({
   subLabelActive: { color: '#2563EB', fontWeight: '600' },
   subLabelDisabled: { color: '#999' },
   subCheck: { fontSize: 16, color: '#2563EB' },
+  addMemberLink: { alignItems: 'center', marginTop: 20 },
+  addMemberLinkText: { color: '#2563EB', fontSize: 14, fontWeight: '600' },
+  addMemberError: { fontSize: 13, color: '#DC2626', marginBottom: 12 },
   saveBtn: { backgroundColor: '#2563EB', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelBtn: { alignItems: 'center', marginTop: 16, marginBottom: 40 },

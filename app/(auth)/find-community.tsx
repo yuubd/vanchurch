@@ -41,7 +41,7 @@ export default function FindCommunity() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
           <Text style={styles.backText}>‹ 뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.title}>공동체 찾기</Text>
@@ -52,6 +52,7 @@ export default function FindCommunity() {
         <TextInput
           style={styles.search}
           placeholder="공동체 이름 검색..."
+          placeholderTextColor="#9CA3AF"
           value={query}
           onChangeText={setQuery}
           clearButtonMode="while-editing"

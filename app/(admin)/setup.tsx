@@ -57,6 +57,7 @@ export default function ChurchSetup() {
           ref={nameRef}
           style={styles.input}
           placeholder="밴쿠버 한인 공동체..."
+          placeholderTextColor="#9CA3AF"
           value={churchName}
           onChangeText={setChurchName}
         />

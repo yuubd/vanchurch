@@ -210,6 +210,7 @@ export default function LeaderPrayers() {
             ref={draftInputRef}
             style={styles.input}
             placeholder={t('sharePrayer')}
+            placeholderTextColor="#9CA3AF"
             multiline
             value={draft}
             onChangeText={setDraft}

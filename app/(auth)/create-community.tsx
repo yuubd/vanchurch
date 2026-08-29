@@ -36,7 +36,8 @@ export default function CreateCommunity() {
       .single();
 
     if (churchErr || !church) {
-      setError(churchErr?.message ?? '오류가 발생했어요');
+      const duplicate = churchErr?.message?.includes('churches_lower_name_key');
+      setError(duplicate ? '이미 사용 중인 공동체 이름이에요' : (churchErr?.message ?? '오류가 발생했어요'));
       setLoading(false);
       return;
     }
@@ -52,7 +53,7 @@ export default function CreateCommunity() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
           <Text style={styles.backText}>‹ 뒤로</Text>
         </TouchableOpacity>
 
@@ -65,6 +66,7 @@ export default function CreateCommunity() {
             ref={nameRef}
             style={styles.input}
             placeholder="VKPC 밴쿠버 한인 장로교회"
+            placeholderTextColor="#9CA3AF"
             value={name}
             onChangeText={setName}
             returnKeyType="done"

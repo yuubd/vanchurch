@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
@@ -60,7 +61,7 @@ export default function MembersScreen() {
 
   const isPastor = myRoles.includes('pastor');
 
-  useEffect(() => { loadData(); }, []);
+  useFocusEffect(useCallback(() => { loadData(); }, []));
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -237,6 +238,7 @@ export default function MembersScreen() {
             ref={nameInputRef}
             style={styles.textInput}
             placeholder={t('namePlaceholder')}
+            placeholderTextColor="#9CA3AF"
             value={newName}
             onChangeText={setNewName}
           />
@@ -244,6 +246,7 @@ export default function MembersScreen() {
           <TextInput
             style={styles.textInput}
             placeholder="604-000-0000"
+            placeholderTextColor="#9CA3AF"
             keyboardType="phone-pad"
             value={newPhone}
             onChangeText={setNewPhone}

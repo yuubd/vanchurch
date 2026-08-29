@@ -172,6 +172,7 @@ export default function LeaderMembers() {
             ref={nameInputRef}
             style={styles.textInput}
             placeholder={t('namePlaceholder')}
+            placeholderTextColor="#9CA3AF"
             value={newName}
             onChangeText={setNewName}
           />
@@ -179,6 +180,7 @@ export default function LeaderMembers() {
           <TextInput
             style={styles.textInput}
             placeholder="604-000-0000"
+            placeholderTextColor="#9CA3AF"
             keyboardType="phone-pad"
             value={newPhone}
             onChangeText={setNewPhone}

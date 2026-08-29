@@ -187,6 +187,7 @@ export default function MemberHome() {
               <TextInput
                 style={styles.input}
                 placeholder={t('sharePrayer')}
+                placeholderTextColor="#9CA3AF"
                 multiline
                 value={draft}
                 onChangeText={setDraft}

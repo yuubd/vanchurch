@@ -157,6 +157,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="604-000-0000"
+              placeholderTextColor="#9CA3AF"
               keyboardType="phone-pad"
               value={phone}
               onChangeText={handlePhoneChange}
@@ -183,6 +184,7 @@ export default function LoginScreen() {
               ref={otpRef}
               style={[styles.input, styles.otpInput]}
               placeholder="000000"
+              placeholderTextColor="#9CA3AF"
               keyboardType="number-pad"
               value={otp}
               onChangeText={t => { setOtp(t.replace(/\D/g, '').slice(0, 6)); setError(''); }}

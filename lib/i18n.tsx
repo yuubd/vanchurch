@@ -279,13 +279,13 @@ type LangContextType = {
 };
 
 const LangContext = createContext<LangContextType>({
-  lang: 'ko',
+  lang: 'en',
   setLang: () => {},
-  t: key => strings.ko[key],
+  t: key => strings.en[key],
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('ko');
+  const [lang, setLangState] = useState<Lang>('en');
 
   useEffect(() => {
     AsyncStorage.getItem('lang').then(v => { if (v === 'ko' || v === 'en') setLangState(v); });
