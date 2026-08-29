@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Switch, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Switch, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 function getWeekRange(offset: number, lang: string): { start: string; end: string; label: string } {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
@@ -72,7 +73,7 @@ export default function PrayersScreen() {
     setTogglingSharing(true);
     const { error } = await supabase.from('churches').update({ cell_prayer_sharing: value }).eq('id', churchId);
     setTogglingSharing(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     setSharingEnabled(value);
   }
 
@@ -110,10 +111,10 @@ export default function PrayersScreen() {
   async function togglePray(id: string, prayedByMe: boolean) {
     if (prayedByMe) {
       const { error } = await supabase.from('prayer_prays').delete().match({ prayer_id: id, user_id: myId });
-      if (error) { Alert.alert('오류', friendlyError(error)); return; }
+      if (error) { showAlert('오류', friendlyError(error)); return; }
     } else {
       const { error } = await supabase.from('prayer_prays').insert({ prayer_id: id, user_id: myId });
-      if (error) { Alert.alert('오류', friendlyError(error)); return; }
+      if (error) { showAlert('오류', friendlyError(error)); return; }
     }
     setRequests(prev => prev.map(r => r.id === id
       ? { ...r, prayedByMe: !prayedByMe, prayCount: r.prayCount + (prayedByMe ? -1 : 1) }

@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 export default function ChurchSetup() {
   const [churchName, setChurchName] = useState('');
@@ -33,7 +34,7 @@ export default function ChurchSetup() {
 
     if (churchError) {
       setSaving(false);
-      Alert.alert('오류', friendlyError(churchError));
+      showAlert('오류', friendlyError(churchError));
       return;
     }
 
@@ -42,7 +43,7 @@ export default function ChurchSetup() {
     setSaving(false);
 
     if (userError) {
-      Alert.alert('오류', friendlyError(userError));
+      showAlert('오류', friendlyError(userError));
       return;
     }
 

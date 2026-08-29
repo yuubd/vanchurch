@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
@@ -29,7 +30,7 @@ export default function ProfileSetup() {
     const { error } = await supabase.from('users').update({ name: trimmed }).eq('id', user?.id);
     if (error) {
       setLoading(false);
-      Alert.alert('오류', friendlyError(error));
+      showAlert('오류', friendlyError(error));
       return;
     }
 

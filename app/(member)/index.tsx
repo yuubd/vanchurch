@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Prayer = { id: string; body: string; created_at: string; prayCount: number; prayedByMe: boolean; authorName?: string; isMine: boolean };
 
@@ -130,7 +131,7 @@ export default function MemberHome() {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('prayer_requests').insert({ user_id: user?.id, body: draft.trim() });
     setLoading(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     setDraft('');
     loadData();
   }
@@ -148,15 +149,15 @@ export default function MemberHome() {
   async function saveEdit(id: string) {
     if (!editDraft.trim()) return;
     const { data, error } = await supabase.from('prayer_requests').update({ body: editDraft.trim() }).eq('id', id).select();
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
-    if (!data || data.length === 0) { Alert.alert('오류', t('editFailed')); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (!data || data.length === 0) { showAlert('오류', t('editFailed')); return; }
     setEditingId('');
     setEditDraft('');
     loadData();
   }
 
   function confirmDelete(id: string) {
-    Alert.alert(t('deleteConfirm'), '', [
+    showAlert(t('deleteConfirm'), '', [
       { text: t('cancel'), style: 'cancel' },
       { text: t('delete'), style: 'destructive', onPress: () => deletePrayer(id) },
     ]);
@@ -164,8 +165,8 @@ export default function MemberHome() {
 
   async function deletePrayer(id: string) {
     const { data, error } = await supabase.from('prayer_requests').delete().eq('id', id).select();
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
-    if (!data || data.length === 0) { Alert.alert('오류', t('deleteFailed')); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (!data || data.length === 0) { showAlert('오류', t('deleteFailed')); return; }
     loadData();
   }
 

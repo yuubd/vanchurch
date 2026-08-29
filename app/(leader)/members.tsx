@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Member = { id: string; name: string; present: boolean };
 
@@ -89,7 +90,7 @@ export default function LeaderMembers() {
     const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
     if (error) {
       setSaving(false);
-      Alert.alert('오류', friendlyError(error));
+      showAlert('오류', friendlyError(error));
       return;
     }
     await loadAttendance();

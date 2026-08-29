@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform, Alert, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Platform, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 import { isBiometricAvailable, isBiometricEnabled, setBiometricEnabled, storeSession, clearBiometrics, promptBiometric } from '../../lib/biometrics';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
 
@@ -76,7 +77,7 @@ export default function ProfileScreen() {
   }
 
   function confirmLeave() {
-    Alert.alert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
+    showAlert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
       { text: t('cancel'), style: 'cancel' },
       { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
     ]);
@@ -89,7 +90,7 @@ export default function ProfileScreen() {
       .from('users')
       .update({ church_id: null, cell_id: null, roles: ['member'] })
       .eq('id', user.id);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 

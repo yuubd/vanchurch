@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, Alert, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 import { clearBiometrics } from '../../lib/biometrics';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Profile = { name: string; roles: string[]; church_id: string | null; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
 
@@ -52,7 +53,7 @@ export default function ProfileScreen() {
   }
 
   function confirmDestroy() {
-    Alert.alert(
+    showAlert(
       t('destroyCommunityTitle'),
       t('destroyCommunityMsg'),
       [
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
     setDestroying(true);
     const { error } = await supabase.rpc('destroy_church', { target_church_id: profile.church_id });
     setDestroying(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 
@@ -80,11 +81,11 @@ export default function ProfileScreen() {
         .neq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
         .contains('roles', ['admin']);
       if (!count) {
-        Alert.alert(t('lastAdminTitle'), t('lastAdminMsg'));
+        showAlert(t('lastAdminTitle'), t('lastAdminMsg'));
         return;
       }
     }
-    Alert.alert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
+    showAlert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
       { text: t('cancel'), style: 'cancel' },
       { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
     ]);
@@ -99,7 +100,7 @@ export default function ProfileScreen() {
       .update({ church_id: null, cell_id: null, roles: ['member'] })
       .eq('id', user.id);
     setLeaving(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
+import { showAlert } from '../../lib/alert';
 
 type Church = { id: string; name: string };
 type PendingRequest = { id: string; churches: { name: string } | null };
@@ -54,7 +55,7 @@ export default function FindCommunity() {
     setCancelling(true);
     const { error } = await supabase.from('join_requests').delete().eq('id', pending.id);
     setCancelling(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     setPending(null);
   }
 
@@ -73,7 +74,7 @@ export default function FindCommunity() {
       { onConflict: 'user_id,church_id', ignoreDuplicates: true }
     );
     setLoading(false);
-    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    if (error) { showAlert('오류', friendlyError(error)); return; }
     router.replace({ pathname: '/(auth)/pending', params: { churchName: selected.name } });
   }
 
