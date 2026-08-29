@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
@@ -8,8 +8,15 @@ type FeedbackItem = { id: string; body: string; created_at: string; userName: st
 export default function AdminFeedbackScreen() {
   const { t, lang } = useTranslation();
   const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadFeedback(); }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadFeedback();
+    setRefreshing(false);
+  }
 
   async function loadFeedback() {
     const [{ data: feedbackData }, { data: allUsers }] = await Promise.all([
@@ -40,6 +47,7 @@ export default function AdminFeedbackScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
