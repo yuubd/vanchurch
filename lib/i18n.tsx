@@ -142,6 +142,7 @@ const strings = {
     lastAdminMsg: '이 공동체에 다른 관리자가 없어요. 나가기 전에 먼저 다른 멤버에게 관리자 권한을 부여해주세요.',
     lastAdminPastorMsg: '이 공동체에 다른 관리자가 없어요. 계속 진행하면 공동체가 삭제됩니다.',
     lastAdminSoloMsg: '이 공동체에 다른 멤버가 없어요. 나가는 대신 공동체를 삭제하시겠어요?',
+    unassignedMembersHint: '체크하면 이 셀에 배정됩니다. 다른 셀에 속한 멤버는 표시되지 않아요.',
   },
   en: {
     // Nav
@@ -281,6 +282,7 @@ const strings = {
     lastAdminMsg: "There's no other admin in this community. Please grant admin to another member before leaving.",
     lastAdminPastorMsg: "There's no other admin in this community. Continuing will delete the community.",
     lastAdminSoloMsg: "There's no one else in this community. Would you like to delete it instead of leaving?",
+    unassignedMembersHint: "Checking a name assigns them to this cell. Members already in another cell aren't shown.",
   },
 };
 

@@ -70,8 +70,8 @@ export default function FindCommunity() {
     if (!user) { setLoading(false); return; }
 
     const { error } = await supabase.from('join_requests').upsert(
-      { user_id: user.id, church_id: selected.id, status: 'pending' },
-      { onConflict: 'user_id,church_id', ignoreDuplicates: true }
+      { user_id: user.id, church_id: selected.id, status: 'pending', created_at: new Date().toISOString() },
+      { onConflict: 'user_id,church_id' }
     );
     setLoading(false);
     if (error) { showAlert('오류', friendlyError(error)); return; }
