@@ -140,6 +140,8 @@ const strings = {
     destroyCommunityMsg: '모든 셀, 가입 요청, 출석 기록이 영구적으로 삭제됩니다. 멤버들의 계정은 유지되지만 이 공동체에서 자동으로 나가게 됩니다. 이 작업은 되돌릴 수 없습니다.',
     lastAdminTitle: '마지막 관리자예요',
     lastAdminMsg: '이 공동체에 다른 관리자가 없어요. 나가기 전에 먼저 다른 멤버에게 관리자 권한을 부여해주세요.',
+    lastAdminPastorMsg: '이 공동체에 다른 관리자가 없어요. 계속 진행하면 공동체가 삭제됩니다.',
+    lastAdminSoloMsg: '이 공동체에 다른 멤버가 없어요. 나가는 대신 공동체를 삭제하시겠어요?',
   },
   en: {
     // Nav
@@ -277,6 +279,8 @@ const strings = {
     destroyCommunityMsg: "All cells, join requests, and attendance records will be permanently deleted. Members' accounts will stay intact but they'll be automatically removed from this community. This cannot be undone.",
     lastAdminTitle: "You're the last admin",
     lastAdminMsg: "There's no other admin in this community. Please grant admin to another member before leaving.",
+    lastAdminPastorMsg: "There's no other admin in this community. Continuing will delete the community.",
+    lastAdminSoloMsg: "There's no one else in this community. Would you like to delete it instead of leaving?",
   },
 };
 

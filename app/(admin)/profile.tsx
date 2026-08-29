@@ -73,18 +73,47 @@ export default function ProfileScreen() {
   }
 
   async function confirmLeave() {
-    if (profile?.roles.includes('admin') && profile.church_id) {
-      const { count } = await supabase
+    if (!profile?.church_id) return;
+    const isPastor = profile.roles.includes('pastor');
+    const isAdmin = profile.roles.includes('admin');
+
+    if (isAdmin) {
+      const myId = (await supabase.auth.getUser()).data.user?.id ?? '';
+      const { count: otherAdmins } = await supabase
         .from('users')
         .select('id', { count: 'exact', head: true })
         .eq('church_id', profile.church_id)
-        .neq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .neq('id', myId)
         .contains('roles', ['admin']);
-      if (!count) {
+
+      if (!otherAdmins) {
+        // Pastors can always dissolve the community outright, no matter who else is in it.
+        if (isPastor) {
+          showAlert(t('lastAdminTitle'), t('lastAdminPastorMsg'), [
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('destroyCommunity'), style: 'destructive', onPress: destroyCommunity },
+          ]);
+          return;
+        }
+        // A non-pastor admin can only delete if they're truly alone — otherwise
+        // they'd be deleting other people's membership without authority to.
+        const { count: others } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('church_id', profile.church_id)
+          .neq('id', myId);
+        if (!others) {
+          showAlert(t('lastAdminTitle'), t('lastAdminSoloMsg'), [
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('destroyCommunity'), style: 'destructive', onPress: destroyCommunity },
+          ]);
+          return;
+        }
         showAlert(t('lastAdminTitle'), t('lastAdminMsg'));
         return;
       }
     }
+
     showAlert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
       { text: t('cancel'), style: 'cancel' },
       { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
