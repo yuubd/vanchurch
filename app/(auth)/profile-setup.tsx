@@ -56,6 +56,7 @@ export default function ProfileSetup() {
             ref={nameRef}
             style={styles.input}
             placeholder="홍길동"
+            placeholderTextColor="#9CA3AF"
             value={name}
             onChangeText={setName}
             returnKeyType="done"

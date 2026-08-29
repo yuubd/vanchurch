@@ -42,17 +42,32 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: cors });
     }
 
-    const { name, phone } = await req.json();
+    const { name, phone, cellId: requestedCellId } = await req.json();
     if (!phone) {
       return new Response(JSON.stringify({ error: "Missing phone" }), { status: 400, headers: cors });
     }
     const e164 = "+" + toE164(phone);
 
-    // Cell leaders can only add into their own cell; admins/pastors add church-wide (no cell).
     const churchId = callerProfile.church_id;
-    const cellId = isAdminOrPastor ? null : callerProfile.cell_id;
-    if (!isAdminOrPastor && !cellId) {
-      return new Response(JSON.stringify({ error: "No cell assigned" }), { status: 400, headers: cors });
+    let cellId: string | null;
+    if (isAdminOrPastor) {
+      // Admins/pastors add church-wide by default, or into a specific cell if one is
+      // requested (e.g. adding from the Cells screen) — verify it belongs to their church.
+      if (requestedCellId) {
+        const { data: targetCell } = await callerClient.from("cells").select("id").eq("id", requestedCellId).eq("church_id", churchId).single();
+        if (!targetCell) {
+          return new Response(JSON.stringify({ error: "Invalid cell" }), { status: 400, headers: cors });
+        }
+        cellId = requestedCellId;
+      } else {
+        cellId = null;
+      }
+    } else {
+      // Cell leaders can only add into their own cell.
+      cellId = callerProfile.cell_id;
+      if (!cellId) {
+        return new Response(JSON.stringify({ error: "No cell assigned" }), { status: 400, headers: cors });
+      }
     }
 
     const admin = createClient(url, serviceKey);

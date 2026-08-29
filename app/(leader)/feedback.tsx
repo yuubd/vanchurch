@@ -54,6 +54,7 @@ export default function FeedbackScreen() {
             <TextInput
               style={styles.input}
               placeholder={t('feedbackPlaceholder')}
+              placeholderTextColor="#9CA3AF"
               multiline
               value={draft}
               onChangeText={v => { setDraft(v); setSent(false); }}

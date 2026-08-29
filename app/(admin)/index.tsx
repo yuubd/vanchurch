@@ -200,6 +200,7 @@ export default function AdminHome() {
               ref={draftInputRef}
               style={styles.modalInput}
               placeholder={t('sharePrayer')}
+              placeholderTextColor="#9CA3AF"
               multiline
               value={draft}
               onChangeText={setDraft}
