@@ -41,13 +41,10 @@ export default function CreateCommunity() {
       return;
     }
 
-    const { error: userErr } = await supabase
-      .from('users')
-      .update({ church_id: church.id, roles: ['pastor', 'admin', 'member'] })
-      .eq('id', user.id);
+    const { error: claimErr } = await supabase.rpc('claim_new_church', { target_church_id: church.id });
 
     setLoading(false);
-    if (userErr) { setError(userErr.message); return; }
+    if (claimErr) { setError(claimErr.message); return; }
 
     router.replace('/(admin)');
   }

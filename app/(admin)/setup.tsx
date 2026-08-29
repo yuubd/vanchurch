@@ -36,10 +36,7 @@ export default function ChurchSetup() {
       return;
     }
 
-    const { error: userError } = await supabase
-      .from('users')
-      .update({ church_id: church.id })
-      .eq('id', user.id);
+    const { error: userError } = await supabase.rpc('claim_new_church', { target_church_id: church.id });
 
     setSaving(false);
 
