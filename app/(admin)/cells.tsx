@@ -183,6 +183,10 @@ export default function CellsScreen() {
             <TouchableOpacity style={styles.rowContent} onPress={() => {
               setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] });
               setMemberIds(new Set(members.filter(m => m.cell_id === item.id).map(m => m.id)));
+              setShowAddMember(false);
+              setNewMemberName('');
+              setNewMemberPhone('');
+              setAddMemberError('');
             }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{t('cellLeader')}: {item.leader?.name ?? t('none')}</Text>
@@ -235,23 +239,65 @@ export default function CellsScreen() {
               </TouchableOpacity>
             );
           })}
-          <Text style={styles.label}>{t('members')}</Text>
-          {[...members].sort((a, b) => a.name.localeCompare(b.name)).map(m => {
-            const checked = memberIds.has(m.id);
-            return (
-              <TouchableOpacity
-                key={m.id}
-                style={[styles.subRow, checked && styles.subRowActive]}
-                onPress={() => toggleMember(m.id)}
-              >
-                <Text style={[styles.subLabel, checked && styles.subLabelActive]}>{m.name}</Text>
-                <Text style={styles.subCheck}>{checked ? '✓' : ''}</Text>
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity style={styles.addMemberLink} onPress={() => { setAddMemberError(''); setShowAddMember(true); }}>
-            <Text style={styles.addMemberLinkText}>{t('addMember')}</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionLabel}>{t('members')}</Text>
+          <Text style={styles.sectionHint}>{t('unassignedMembersHint')}</Text>
+          {[...members]
+            .filter(m => !m.cell_id || m.cell_id === editing?.id)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(m => {
+              const checked = memberIds.has(m.id);
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.subRow, checked && styles.subRowActive]}
+                  onPress={() => toggleMember(m.id)}
+                >
+                  <Text style={[styles.subLabel, checked && styles.subLabelActive]}>{m.name}</Text>
+                  <Text style={styles.subCheck}>{checked ? '✓' : ''}</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+          {showAddMember ? (
+            <View style={styles.inlineAddCard}>
+              <Text style={styles.label}>{t('nameOptional')}</Text>
+              <TextInput
+                ref={memberNameRef}
+                style={styles.input}
+                placeholder={t('namePlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                value={newMemberName}
+                onChangeText={setNewMemberName}
+              />
+              <Text style={styles.label}>{t('phoneNumber')}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="604-000-0000"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="phone-pad"
+                value={newMemberPhone}
+                onChangeText={setNewMemberPhone}
+              />
+              {!!addMemberError && <Text style={styles.addMemberError}>{addMemberError}</Text>}
+              <View style={styles.inlineAddBtns}>
+                <TouchableOpacity style={styles.inlineCancelBtn} onPress={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberPhone(''); setAddMemberError(''); }}>
+                  <Text style={styles.cancelText}>{t('cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.inlineAddBtn, (newMemberPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+                  onPress={addMemberToCell}
+                  disabled={newMemberPhone.replace(/\D/g, '').length < 10 || addingMember}
+                >
+                  <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.addMemberLink} onPress={() => { setAddMemberError(''); setShowAddMember(true); }}>
+              <Text style={styles.addMemberLinkText}>{t('addMember')}</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveEdit} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? '...' : t('save')}</Text>
           </TouchableOpacity>
@@ -259,41 +305,6 @@ export default function CellsScreen() {
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </ScrollView>
-      </Modal>
-
-      <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => memberNameRef.current?.focus()}>
-        <View style={styles.modal}>
-          <Text style={styles.modalTitle}>{t('addMember')}</Text>
-          <Text style={styles.label}>{t('nameOptional')}</Text>
-          <TextInput
-            ref={memberNameRef}
-            style={styles.input}
-            placeholder={t('namePlaceholder')}
-            placeholderTextColor="#9CA3AF"
-            value={newMemberName}
-            onChangeText={setNewMemberName}
-          />
-          <Text style={styles.label}>{t('phoneNumber')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="604-000-0000"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="phone-pad"
-            value={newMemberPhone}
-            onChangeText={setNewMemberPhone}
-          />
-          {!!addMemberError && <Text style={styles.addMemberError}>{addMemberError}</Text>}
-          <TouchableOpacity
-            style={[styles.saveBtn, (newMemberPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
-            onPress={addMemberToCell}
-            disabled={newMemberPhone.replace(/\D/g, '').length < 10 || addingMember}
-          >
-            <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
-            <Text style={styles.cancelText}>{t('cancel')}</Text>
-          </TouchableOpacity>
-        </View>
       </Modal>
 
       <Modal visible={!!confirmDeleteId} animationType="fade" transparent>
@@ -351,9 +362,15 @@ const styles = StyleSheet.create({
   subLabelActive: { color: '#2563EB', fontWeight: '600' },
   subLabelDisabled: { color: '#999' },
   subCheck: { fontSize: 16, color: '#2563EB' },
+  sectionLabel: { fontSize: 14, color: '#666', marginTop: 24, marginBottom: 4, fontWeight: '700' },
+  sectionHint: { fontSize: 12, color: '#9CA3AF', marginBottom: 12 },
   addMemberLink: { alignItems: 'center', marginTop: 20 },
   addMemberLinkText: { color: '#2563EB', fontSize: 14, fontWeight: '600' },
   addMemberError: { fontSize: 13, color: '#DC2626', marginBottom: 12 },
+  inlineAddCard: { marginTop: 16, padding: 16, borderRadius: 12, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F0F0F0' },
+  inlineAddBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  inlineCancelBtn: { flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
+  inlineAddBtn: { flex: 1, backgroundColor: '#2563EB', borderRadius: 10, padding: 14, alignItems: 'center' },
   saveBtn: { backgroundColor: '#2563EB', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 32 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelBtn: { alignItems: 'center', marginTop: 16, marginBottom: 40 },
