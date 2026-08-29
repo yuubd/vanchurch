@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
+import { friendlyError } from '../../lib/friendlyError';
 
 export default function CreateCommunity() {
   const [name, setName] = useState('');
@@ -37,7 +38,7 @@ export default function CreateCommunity() {
 
     if (churchErr || !church) {
       const duplicate = churchErr?.message?.includes('churches_lower_name_key');
-      setError(duplicate ? '이미 사용 중인 공동체 이름이에요' : (churchErr?.message ?? '오류가 발생했어요'));
+      setError(duplicate ? '이미 사용 중인 공동체 이름이에요' : friendlyError(churchErr));
       setLoading(false);
       return;
     }
@@ -45,7 +46,7 @@ export default function CreateCommunity() {
     const { error: claimErr } = await supabase.rpc('claim_new_church', { target_church_id: church.id });
 
     setLoading(false);
-    if (claimErr) { setError(claimErr.message); return; }
+    if (claimErr) { setError(friendlyError(claimErr)); return; }
 
     router.replace('/(admin)');
   }

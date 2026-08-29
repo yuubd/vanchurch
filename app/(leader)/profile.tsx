@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 import { clearBiometrics } from '../../lib/biometrics';
+import { friendlyError } from '../../lib/friendlyError';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
 
@@ -24,6 +25,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
@@ -45,6 +47,26 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
+  function confirmLeave() {
+    Alert.alert(t('leaveConfirmTitle'), t('leaveConfirmMsg'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('leaveCommunity'), style: 'destructive', onPress: leaveCommunity },
+    ]);
+  }
+
+  async function leaveCommunity() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setLeaving(true);
+    const { error } = await supabase
+      .from('users')
+      .update({ church_id: null, cell_id: null, roles: ['member'] })
+      .eq('id', user.id);
+    setLeaving(false);
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
+    router.replace('/(auth)/onboarding');
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
@@ -62,7 +84,14 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t('churchName')}</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>{t('churchName')}</Text>
+              {!!profile.churches?.name && (
+                <TouchableOpacity onPress={confirmLeave} disabled={leaving} hitSlop={8}>
+                  <Text style={styles.leaveLink}>{leaving ? '...' : t('leave')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={styles.value}>{profile.churches?.name ?? '—'}</Text>
           </View>
 
@@ -111,6 +140,8 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  leaveLink: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   langToggle: { flexDirection: 'row', gap: 8 },

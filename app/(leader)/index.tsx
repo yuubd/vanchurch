@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, A
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { friendlyError } from '../../lib/friendlyError';
 
 type PrayerRequest = {
   id: string;
@@ -131,7 +132,7 @@ export default function LeaderPrayers() {
       body: draft.trim(),
     });
     setLoading(false);
-    if (error) { Alert.alert('오류', error.message); return; }
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
     setDraft('');
     setModalVisible(false);
     loadRequests(cellId, myId);

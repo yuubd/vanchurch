@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
 import { isBiometricAvailable, isBiometricEnabled, setBiometricEnabled, storeSession, clearBiometrics, promptBiometric } from '../../lib/biometrics';
+import { friendlyError } from '../../lib/friendlyError';
 
 type Profile = { name: string; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
 
@@ -81,7 +82,7 @@ export default function ProfileScreen() {
       .from('users')
       .update({ church_id: null, cell_id: null, roles: ['member'] })
       .eq('id', user.id);
-    if (error) { Alert.alert('오류', error.message); return; }
+    if (error) { Alert.alert('오류', friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 

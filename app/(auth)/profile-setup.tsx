@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvo
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
+import { friendlyError } from '../../lib/friendlyError';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
@@ -15,6 +16,11 @@ export default function ProfileSetup() {
     if (inputReady) nameRef.current?.focus();
   }, [inputReady]);
 
+  async function logout() {
+    await supabase.auth.signOut();
+    router.replace('/(auth)/login');
+  }
+
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -23,7 +29,7 @@ export default function ProfileSetup() {
     const { error } = await supabase.from('users').update({ name: trimmed }).eq('id', user?.id);
     if (error) {
       setLoading(false);
-      Alert.alert('오류', error.message);
+      Alert.alert('오류', friendlyError(error));
       return;
     }
 
@@ -72,6 +78,9 @@ export default function ProfileSetup() {
         >
           <Text style={styles.btnText}>{loading ? '...' : '다음 / Next'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+          <Text style={styles.logoutText}>로그아웃</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -87,4 +96,6 @@ const styles = StyleSheet.create({
   btn: { backgroundColor: '#1D3FAA', borderRadius: 14, padding: 18, alignItems: 'center' },
   btnDisabled: { opacity: 0.4 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  logoutBtn: { alignItems: 'center', paddingVertical: 20 },
+  logoutText: { fontSize: 14, color: '#9CA3AF' },
 });
