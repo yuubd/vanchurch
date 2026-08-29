@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
@@ -12,8 +12,16 @@ export default function FeedbackScreen() {
   const [sent, setSent] = useState(false);
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [userId, setUserId] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { init(); }, []);
+
+  async function onRefresh() {
+    if (!userId) return;
+    setRefreshing(true);
+    await loadFeedback(userId);
+    setRefreshing(false);
+  }
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -49,6 +57,7 @@ export default function FeedbackScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={styles.compose}>
             <TextInput

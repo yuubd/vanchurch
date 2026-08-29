@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation, Lang } from '../../lib/i18n';
@@ -26,10 +26,17 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
   useEffect(() => { loadProfile(); }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadProfile();
+    setRefreshing(false);
+  }
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,7 +75,11 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
       {profile && (
         <View>

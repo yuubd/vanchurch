@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
@@ -15,14 +15,25 @@ export default function FindCommunity() {
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingRequest | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const searchReady = useDelayedMount();
 
   useEffect(() => {
-    supabase.from('churches').select('id, name').eq('is_public', true).order('name')
-      .then(({ data }) => setChurches((data ?? []) as Church[]));
+    loadChurches();
     loadPending();
   }, []);
+
+  async function loadChurches() {
+    const { data } = await supabase.from('churches').select('id, name').eq('is_public', true).order('name');
+    setChurches((data ?? []) as Church[]);
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await Promise.all([loadChurches(), loadPending()]);
+    setRefreshing(false);
+  }
 
   async function loadPending() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -105,6 +116,7 @@ export default function FindCommunity() {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.churchRow, selected?.id === item.id && styles.churchRowSelected]}
