@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -7,10 +8,17 @@ import { useTranslation } from '../../lib/i18n';
 type Stats = { members: number; cells: number; attended: number };
 type Prayer = { id: string; body: string; created_at: string; prayCount: number };
 
-function getLastSunday(): string {
+function getDateLabel(date: Date, lang: string) {
+  const locale = lang === 'en' ? 'en-US' : 'ko-KR';
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+}
+
+// offset 0 = most recent Sunday (today if today is Sunday), -1 = the Sunday before that, etc.
+function getSunday(offset: number): Date {
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().split('T')[0];
+  d.setDate(d.getDate() - d.getDay() + offset * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 export default function AdminHome() {
@@ -26,8 +34,10 @@ export default function AdminHome() {
   const [sending, setSending] = useState(false);
   const draftInputRef = useRef<TextInput>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const cellIdsRef = useRef<string[]>([]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, []));
+  useFocusEffect(useCallback(() => { loadData(); }, [weekOffset]));
 
   async function onRefresh() {
     setRefreshing(true);
@@ -58,23 +68,37 @@ export default function AdminHome() {
     ]);
 
     const cellIds = (churchCells ?? []).map(c => c.id);
+    cellIdsRef.current = cellIds;
     const cellCount = cellIds.length;
 
-    const { data: attendanceData } = cellIds.length
-      ? await supabase.from('attendance_records').select('present').eq('meeting_date', getLastSunday()).in('cell_id', cellIds)
-      : { data: [] };
+    const attended = await loadAttendance(weekOffset);
 
     const prayerIds = (prayerData ?? []).map((p: any) => p.id);
     const { data: allPrays } = prayerIds.length
       ? await supabase.from('prayer_prays').select('prayer_id').in('prayer_id', prayerIds)
       : { data: [] };
 
-    const attended = (attendanceData ?? []).filter(r => r.present).length;
     setStats({ members: memberCount ?? 0, cells: cellCount, attended });
 
     const prayCountMap: Record<string, number> = {};
     (allPrays ?? []).forEach((p: any) => { prayCountMap[p.prayer_id] = (prayCountMap[p.prayer_id] ?? 0) + 1; });
     setPrayers((prayerData ?? []).map((r: any) => ({ ...r, prayCount: prayCountMap[r.id] ?? 0 })));
+  }
+
+  async function loadAttendance(offset: number): Promise<number> {
+    const cellIds = cellIdsRef.current;
+    if (!cellIds.length) return 0;
+    const dateStr = getSunday(offset).toISOString().split('T')[0];
+    const { data } = await supabase.from('attendance_records').select('present').eq('meeting_date', dateStr).in('cell_id', cellIds);
+    return (data ?? []).filter(r => r.present).length;
+  }
+
+  async function changeWeek(delta: number) {
+    const next = weekOffset + delta;
+    if (next > 0) return;
+    setWeekOffset(next);
+    const attended = await loadAttendance(next);
+    setStats(s => ({ ...s, attended }));
   }
 
   async function submitPrayer() {
@@ -113,6 +137,15 @@ export default function AdminHome() {
           <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
             <Text style={[styles.statNum, { color: '#2563EB' }]}>{stats.attended}/{stats.members}</Text>
             <Text style={styles.statLabel}>{t('attendance')}</Text>
+            <View style={styles.weekNav}>
+              <TouchableOpacity onPress={() => changeWeek(-1)} hitSlop={10}>
+                <Ionicons name="chevron-back" size={14} color="#2563EB" />
+              </TouchableOpacity>
+              <Text style={styles.weekLabel}>{getDateLabel(getSunday(weekOffset), lang)}</Text>
+              <TouchableOpacity onPress={() => changeWeek(1)} disabled={weekOffset >= 0} hitSlop={10}>
+                <Ionicons name="chevron-forward" size={14} color={weekOffset >= 0 ? '#BFDBFE' : '#2563EB'} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}>
             <Text style={[styles.statNum, { color: '#16A34A' }]}>{stats.cells}</Text>
@@ -206,6 +239,8 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, borderRadius: 16, padding: 16, alignItems: 'center' },
   statNum: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
   statLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  weekNav: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  weekLabel: { fontSize: 11, color: '#2563EB', fontWeight: '600' },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
   menuCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
   menuText: { gap: 3 },

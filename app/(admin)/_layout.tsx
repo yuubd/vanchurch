@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,21 +17,30 @@ export default function AdminLayout() {
   const insets = useSafeAreaInsets();
   const [allowed, setAllowed] = useState(false);
   const [isPastor, setIsPastor] = useState(false);
+  const [hasCell, setHasCell] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const churchIdRef = useRef<string | null>(null);
+
+  async function refreshPendingCount() {
+    if (!churchIdRef.current) return;
+    const { count } = await supabase.from('join_requests').select('id', { count: 'exact', head: true })
+      .eq('church_id', churchIdRef.current).eq('status', 'pending');
+    setPendingCount(count ?? 0);
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace('/(auth)/login'); return; }
-      supabase.from('users').select('roles, church_id').eq('id', user.id).single().then(({ data }) => {
+      supabase.from('users').select('roles, church_id, cell_id').eq('id', user.id).single().then(({ data }) => {
         const roles: string[] = data?.roles ?? [];
         if (!data?.church_id) {
           router.replace('/(auth)/onboarding');
         } else if (roles.includes('admin') || roles.includes('pastor')) {
           setIsPastor(roles.includes('pastor'));
+          setHasCell(!!data.cell_id);
           setAllowed(true);
-          supabase.from('join_requests').select('id', { count: 'exact', head: true })
-            .eq('church_id', data.church_id).eq('status', 'pending')
-            .then(({ count }) => setPendingCount(count ?? 0));
+          churchIdRef.current = data.church_id;
+          refreshPendingCount();
         } else if (roles.includes('cell_leader')) {
           router.replace('/(leader)');
         } else {
@@ -39,6 +48,11 @@ export default function AdminLayout() {
         }
       });
     });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(refreshPendingCount, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!allowed) return null;
@@ -66,6 +80,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="index"   options={{ title: t('home'),          tabBarIcon: ({ focused }) => <TabIcon name="home"    focused={focused} /> }} />
       <Tabs.Screen name="prayers" options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"   focused={focused} />, href: isPastor ? undefined : null }} />
       <Tabs.Screen name="members" options={{ title: t('members'), tabBarIcon: ({ focused }) => <TabIcon name="people" focused={focused} />, tabBarBadge: pendingCount > 0 ? pendingCount : undefined }} />
+      <Tabs.Screen name="attendance" options={{ title: t('attendance'), tabBarIcon: ({ focused }) => <TabIcon name="checkmark-circle" focused={focused} />, href: hasCell ? undefined : null }} />
       <Tabs.Screen name="cells"   options={{ title: t('cells'),          tabBarIcon: ({ focused }) => <TabIcon name="grid"    focused={focused} /> }} />
       <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person"  focused={focused} /> }} />

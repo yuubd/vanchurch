@@ -1,23 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
-
-function getDateLabel(date: Date, lang: string) {
-  const locale = lang === 'en' ? 'en-US' : 'ko-KR';
-  return date.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' });
-}
-
-function getThisSunday(offset = 0) {
-  const today = new Date();
-  const diff = today.getDay() === 0 ? 0 : -today.getDay();
-  const d = new Date(today);
-  d.setDate(today.getDate() + diff + offset * 7);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
@@ -71,69 +56,21 @@ export default function MembersScreen() {
   const [addingMember, setAddingMember] = useState(false);
   const [addError, setAddError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const { t, lang } = useTranslation();
-
-  const [myCellId, setMyCellId] = useState<string | null>(null);
-  const [view, setView] = useState<'members' | 'attendance'>('members');
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [attendanceMap, setAttendanceMap] = useState<Record<string, boolean>>({});
-  const [attSaving, setAttSaving] = useState(false);
-  const [attSaved, setAttSaved] = useState(false);
+  const { t } = useTranslation();
 
   const isPastor = myRoles.includes('pastor');
 
-  const sunday = getThisSunday(weekOffset);
-  const dateStr = sunday.toISOString().split('T')[0];
-  const cellMembers = members.filter(m => m.cell_id === myCellId).sort((a, b) => a.name.localeCompare(b.name));
-  const cellName = cells.find(c => c.id === myCellId)?.name ?? '';
-  const presentCount = cellMembers.filter(m => attendanceMap[m.id]).length;
-
   useEffect(() => { loadData(); }, []);
-  useEffect(() => { if (view === 'attendance' && myCellId) loadAttendance(); setAttSaved(false); }, [view, myCellId, weekOffset]);
-
-  async function loadAttendance() {
-    if (!myCellId) return;
-    const { data } = await supabase
-      .from('attendance_records')
-      .select('user_id, present')
-      .eq('cell_id', myCellId)
-      .eq('meeting_date', dateStr);
-    setAttendanceMap(Object.fromEntries((data ?? []).map(r => [r.user_id, r.present])));
-  }
-
-  function toggleAttendance(id: string) {
-    setAttendanceMap(prev => ({ ...prev, [id]: !prev[id] }));
-    setAttSaved(false);
-  }
-
-  async function saveAttendance() {
-    if (!myCellId) return;
-    setAttSaving(true);
-    setAttSaved(false);
-    const records = cellMembers.map(m => ({
-      user_id: m.id, cell_id: myCellId, meeting_date: dateStr, present: !!attendanceMap[m.id],
-    }));
-    const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
-    if (error) {
-      setAttSaving(false);
-      Alert.alert('오류', error.message);
-      return;
-    }
-    await loadAttendance();
-    setAttSaving(false);
-    setAttSaved(true);
-  }
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: myProfile } = user
-      ? await supabase.from('users').select('roles, church_id, cell_id').eq('id', user.id).single()
+      ? await supabase.from('users').select('roles, church_id').eq('id', user.id).single()
       : { data: null };
 
     const churchId = (myProfile as any)?.church_id ?? null;
     setMyRoles((myProfile as any)?.roles ?? []);
     setMyChurchId(churchId);
-    setMyCellId((myProfile as any)?.cell_id ?? null);
 
     const queries: Promise<any>[] = [
       supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)').eq('church_id', churchId ?? ''),
@@ -158,7 +95,6 @@ export default function MembersScreen() {
   async function onRefresh() {
     setRefreshing(true);
     await loadData();
-    if (view === 'attendance' && myCellId) await loadAttendance();
     setRefreshing(false);
   }
 
@@ -241,63 +177,15 @@ export default function MembersScreen() {
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>{t('members')}</Text>
-          {view === 'members' && (
-            <TouchableOpacity onPress={cycleSort}>
-              <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {view === 'members' && (
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
-            <Text style={styles.addBtnText}>+</Text>
+          <TouchableOpacity onPress={cycleSort}>
+            <Text style={styles.sortBtnText}>{t(sortMode === 'name' ? 'sortByName' : sortMode === 'cell' ? 'sortByCell' : 'sortByRole')} {sortAsc ? '↑' : '↓'}</Text>
           </TouchableOpacity>
-        )}
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
+          <Text style={styles.addBtnText}>+</Text>
+        </TouchableOpacity>
       </View>
 
-      {!!myCellId && (
-        <View style={styles.tabRow}>
-          <TouchableOpacity style={[styles.tabBtn, view === 'members' && styles.tabBtnActive]} onPress={() => setView('members')}>
-            <Text style={[styles.tabText, view === 'members' && styles.tabTextActive]}>{t('members')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tabBtn, view === 'attendance' && styles.tabBtnActive]} onPress={() => setView('attendance')}>
-            <Text style={[styles.tabText, view === 'attendance' && styles.tabTextActive]}>{t('attendance')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {view === 'attendance' && myCellId ? (
-        <>
-          <View style={styles.dateNav}>
-            <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} style={styles.navBtn} hitSlop={12}>
-              <Ionicons name="chevron-back" size={20} color="#374151" />
-            </TouchableOpacity>
-            <Text style={styles.dateLabel}>{getDateLabel(sunday, lang)}{cellName ? ` · ${cellName}` : ''}</Text>
-            <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0} hitSlop={12}>
-              <Ionicons name="chevron-forward" size={20} color={weekOffset >= 0 ? '#D1D5DB' : '#374151'} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.summary}>{presentCount} / {cellMembers.length}{t('attendanceSummary')}</Text>
-          <FlatList
-            data={cellMembers}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.attList}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.row} onPress={() => toggleAttendance(item.id)} activeOpacity={0.7}>
-                <Text style={styles.name}>{item.name}</Text>
-                <View style={[styles.check, attendanceMap[item.id] && styles.checkActive]}>
-                  {attendanceMap[item.id] && <Ionicons name="checkmark" size={18} color="#fff" />}
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
-          />
-          <TouchableOpacity style={[styles.saveBtn, styles.attSaveBtn, attSaving && styles.disabled]} onPress={saveAttendance} disabled={attSaving}>
-            <Text style={styles.saveBtnText}>{attSaving ? t('saving') : attSaved ? t('saved') : t('saveBtn')}</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
       {joinRequests.length > 0 && (
         <View style={styles.pendingSection}>
           <Text style={styles.pendingHeader}>{t('pendingApprovals')} ({joinRequests.length})</Text>
@@ -340,8 +228,6 @@ export default function MembersScreen() {
         )}
         ListEmptyComponent={<Text style={styles.empty}>{t('noMembers')}</Text>}
       />
-        </>
-      )}
 
       <Modal visible={showAddMember} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMember(false)} onShow={() => nameInputRef.current?.focus()}>
         <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -453,17 +339,4 @@ const styles = StyleSheet.create({
   cancelBtn: { alignItems: 'center', marginTop: 16 },
   cancelText: { color: '#888', fontSize: 15 },
   disabled: { opacity: 0.5 },
-  tabRow: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 12, gap: 8 },
-  tabBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6' },
-  tabBtnActive: { backgroundColor: '#2563EB' },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  tabTextActive: { color: '#fff' },
-  dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingVertical: 16, marginTop: 8, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F3F4F6' },
-  navBtn: { padding: 4 },
-  dateLabel: { fontSize: 15, fontWeight: '700', color: '#111827', minWidth: 180, textAlign: 'center' },
-  summary: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 10 },
-  attList: { paddingHorizontal: 20, paddingBottom: 20 },
-  check: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  checkActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  attSaveBtn: { marginHorizontal: 20, marginBottom: 24, marginTop: 4 },
 });

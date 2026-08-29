@@ -39,6 +39,9 @@ export default function PendingScreen() {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
+        <Text style={styles.backText}>‹ 뒤로</Text>
+      </TouchableOpacity>
       <Text style={styles.icon}>🙏</Text>
       <Text style={styles.title}>{t('pendingTitle')}</Text>
       <Text style={styles.sub}>
@@ -56,6 +59,8 @@ export default function PendingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  back: { position: 'absolute', top: 60, left: 28 },
+  backText: { fontSize: 16, color: '#2563EB', fontWeight: '600' },
   icon: { fontSize: 64, marginBottom: 24 },
   title: { fontSize: 26, fontWeight: '900', color: '#111827', letterSpacing: -0.5, marginBottom: 14, textAlign: 'center' },
   sub: { fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 26, marginBottom: 20 },
