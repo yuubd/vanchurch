@@ -32,23 +32,23 @@ export default function CreateCommunity() {
     const bytes = new Uint8Array(9);
     crypto.getRandomValues(bytes);
     const token = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
-    const { data: church, error: churchErr } = await supabase
-      .from('churches')
-      .insert({ name: trimmed, is_public: isPublic, invite_token: token })
-      .select('id')
-      .single();
 
-    if (churchErr || !church) {
-      const duplicate = churchErr?.message?.includes('churches_lower_name_key');
-      setError(duplicate ? t('duplicateCommunityName') : friendlyError(churchErr));
-      setLoading(false);
-      return;
-    }
-
-    const { error: claimErr } = await supabase.rpc('claim_new_church', { target_church_id: church.id });
+    // Atomic: creates the church and claims ownership in one transaction, so a failed
+    // claim (already in a community, pending request elsewhere) can't leave an
+    // orphaned, unowned church behind.
+    const { error } = await supabase.rpc('create_and_claim_church', {
+      church_name: trimmed,
+      church_is_public: isPublic,
+      church_invite_token: token,
+    });
 
     setLoading(false);
-    if (claimErr) { setError(friendlyError(claimErr)); return; }
+    if (error) {
+      const duplicate = error.message?.includes('churches_lower_name_key');
+      const pendingRequest = error.message?.includes('pending join request exists');
+      setError(duplicate ? t('duplicateCommunityName') : pendingRequest ? t('pendingRequestExists') : friendlyError(error));
+      return;
+    }
 
     router.replace('/(admin)');
   }

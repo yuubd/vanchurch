@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { isValidDate } from '../../lib/dob';
 
 type Member = { id: string; name: string; present: boolean };
 
@@ -34,6 +35,7 @@ export default function LeaderMembers() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newDob, setNewDob] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [addError, setAddError] = useState('');
   const nameInputRef = useRef<TextInput>(null);
@@ -90,7 +92,7 @@ export default function LeaderMembers() {
     const { error } = await supabase.from('attendance_records').upsert(records, { onConflict: 'user_id,meeting_date' });
     if (error) {
       setSaving(false);
-      showAlert('오류', friendlyError(error));
+      showAlert(t('error'), friendlyError(error));
       return;
     }
     await loadAttendance();
@@ -102,10 +104,11 @@ export default function LeaderMembers() {
 
   async function addMember() {
     if (newPhone.replace(/\D/g, '').length < 10) return;
+    if (newDob && !isValidDate(newDob)) return;
     setAddingMember(true);
     setAddError('');
     const { error } = await supabase.functions.invoke('add-member', {
-      body: { name: newName.trim(), phone: newPhone },
+      body: { name: newName.trim(), phone: newPhone, dateOfBirth: newDob || undefined },
     });
     setAddingMember(false);
     if (error) {
@@ -116,6 +119,7 @@ export default function LeaderMembers() {
     setShowAddMember(false);
     setNewName('');
     setNewPhone('');
+    setNewDob('');
     loadCell();
   }
 
@@ -187,16 +191,26 @@ export default function LeaderMembers() {
             value={newPhone}
             onChangeText={setNewPhone}
           />
+          <Text style={styles.modalLabel}>{t('dateOfBirth')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder={t('dateOfBirthPlaceholder')}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numbers-and-punctuation"
+            value={newDob}
+            onChangeText={setNewDob}
+          />
+          {!!newDob && !isValidDate(newDob) && <Text style={styles.addError}>{t('dateOfBirthInvalid')}</Text>}
           <Text style={styles.addHint}>{t('addMemberHint')}</Text>
           {!!addError && <Text style={styles.addError}>{addError}</Text>}
           <TouchableOpacity
-            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || (!!newDob && !isValidDate(newDob)) || addingMember) && styles.saveBtnDisabled]}
             onPress={addMember}
-            disabled={newPhone.replace(/\D/g, '').length < 10 || addingMember}
+            disabled={newPhone.replace(/\D/g, '').length < 10 || (!!newDob && !isValidDate(newDob)) || addingMember}
           >
             <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAddMember(false); setNewDob(''); }}>
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>

@@ -1,16 +1,10 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 
 export default function Onboarding() {
   const router = useRouter();
   const { t } = useTranslation();
-
-  async function logout() {
-    await supabase.auth.signOut();
-    router.replace('/(auth)/login');
-  }
 
   return (
     <View style={styles.container}>
@@ -39,10 +33,6 @@ export default function Onboarding() {
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-        <Text style={styles.logoutText}>{t('logout')}</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -60,6 +50,4 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
   cardSub: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
   chevron: { fontSize: 22, color: '#D1D5DB' },
-  logoutBtn: { alignItems: 'center', paddingVertical: 12 },
-  logoutText: { fontSize: 14, color: '#9CA3AF' },
 });

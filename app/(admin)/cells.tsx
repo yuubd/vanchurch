@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { isValidDate } from '../../lib/dob';
 
 type Leader = { id: string; name: string };
 type Cell = { id: string; name: string; leader_id: string | null; sub_leader_ids: string[]; leader: { name: string } | null };
@@ -26,6 +27,7 @@ export default function CellsScreen() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberDob, setNewMemberDob] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [addMemberError, setAddMemberError] = useState('');
   const memberNameRef = useRef<TextInput>(null);
@@ -65,7 +67,7 @@ export default function CellsScreen() {
     const { error } = await supabase.from('cells')
       .update({ name: editing.name, leader_id: newLeaderId, sub_leader_ids: editing.sub_leader_ids })
       .eq('id', editing.id);
-    if (error) { setSaving(false); showAlert('오류', friendlyError(error)); return; }
+    if (error) { setSaving(false); showAlert(t('error'), friendlyError(error)); return; }
 
     // Assigning a leader here only updated cells.leader_id — it must also grant
     // the cell_leader role and set the user's cell_id, or their profile/tabs
@@ -112,10 +114,11 @@ export default function CellsScreen() {
 
   async function addMemberToCell() {
     if (!editing || newMemberPhone.replace(/\D/g, '').length < 10) return;
+    if (newMemberDob && !isValidDate(newMemberDob)) return;
     setAddingMember(true);
     setAddMemberError('');
     const { data, error } = await supabase.functions.invoke('add-member', {
-      body: { name: newMemberName.trim(), phone: newMemberPhone, cellId: editing.id },
+      body: { name: newMemberName.trim(), phone: newMemberPhone, cellId: editing.id, dateOfBirth: newMemberDob || undefined },
     });
     setAddingMember(false);
     if (error) {
@@ -127,6 +130,7 @@ export default function CellsScreen() {
     setShowAddMember(false);
     setNewMemberName('');
     setNewMemberPhone('');
+    setNewMemberDob('');
     loadData();
   }
 
@@ -138,7 +142,7 @@ export default function CellsScreen() {
     const { data: me } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     const { error } = await supabase.from('cells').insert({ name: newName.trim(), church_id: me?.church_id });
     setSaving(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
     setAdding(false);
     setNewName('');
     loadData();
@@ -278,15 +282,25 @@ export default function CellsScreen() {
                 value={newMemberPhone}
                 onChangeText={setNewMemberPhone}
               />
+              <Text style={styles.label}>{t('dateOfBirth')}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t('dateOfBirthPlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numbers-and-punctuation"
+                value={newMemberDob}
+                onChangeText={setNewMemberDob}
+              />
+              {!!newMemberDob && !isValidDate(newMemberDob) && <Text style={styles.addMemberError}>{t('dateOfBirthInvalid')}</Text>}
               {!!addMemberError && <Text style={styles.addMemberError}>{addMemberError}</Text>}
               <View style={styles.inlineAddBtns}>
-                <TouchableOpacity style={styles.inlineCancelBtn} onPress={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberPhone(''); setAddMemberError(''); }}>
+                <TouchableOpacity style={styles.inlineCancelBtn} onPress={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberPhone(''); setNewMemberDob(''); setAddMemberError(''); }}>
                   <Text style={styles.cancelText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.inlineAddBtn, (newMemberPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+                  style={[styles.inlineAddBtn, (newMemberPhone.replace(/\D/g, '').length < 10 || (!!newMemberDob && !isValidDate(newMemberDob)) || addingMember) && styles.disabled]}
                   onPress={addMemberToCell}
-                  disabled={newMemberPhone.replace(/\D/g, '').length < 10 || addingMember}
+                  disabled={newMemberPhone.replace(/\D/g, '').length < 10 || (!!newMemberDob && !isValidDate(newMemberDob)) || addingMember}
                 >
                   <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
                 </TouchableOpacity>

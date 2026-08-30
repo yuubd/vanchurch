@@ -167,6 +167,12 @@ const strings = {
     profileSetupTitle: '프로필 설정',
     profileSetupSubtitle: '이름을 입력해주세요',
     duplicateCommunityName: '이미 사용 중인 공동체 이름이에요',
+    alreadyInAnotherCommunity: '이 사용자는 이미 다른 공동체에 가입되어 있어요',
+    pendingRequestExists: '다른 공동체에 참여 요청을 보낸 상태예요. 먼저 취소해주세요',
+    dateOfBirth: '생년월일',
+    dateOfBirthPlaceholder: 'YYYY-MM-DD',
+    dateOfBirthRequired: '생년월일을 입력해주세요',
+    dateOfBirthInvalid: '생년월일 형식이 올바르지 않아요 (YYYY-MM-DD)',
   },
   en: {
     // Nav
@@ -331,6 +337,12 @@ const strings = {
     profileSetupTitle: 'Profile setup',
     profileSetupSubtitle: 'Please enter your name',
     duplicateCommunityName: 'That community name is already taken',
+    alreadyInAnotherCommunity: 'This person has already joined a different community',
+    pendingRequestExists: "You've already requested to join another community. Cancel that first",
+    dateOfBirth: 'Date of birth',
+    dateOfBirthPlaceholder: 'YYYY-MM-DD',
+    dateOfBirthRequired: 'Please enter your date of birth',
+    dateOfBirthInvalid: 'Date of birth must be in YYYY-MM-DD format',
   },
 };
 
