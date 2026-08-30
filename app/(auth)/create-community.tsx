@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
+import { useTranslation } from '../../lib/i18n';
 
 export default function CreateCommunity() {
   const [name, setName] = useState('');
@@ -13,6 +14,7 @@ export default function CreateCommunity() {
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
   const inputReady = useDelayedMount();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (inputReady) nameRef.current?.focus();
@@ -38,7 +40,7 @@ export default function CreateCommunity() {
 
     if (churchErr || !church) {
       const duplicate = churchErr?.message?.includes('churches_lower_name_key');
-      setError(duplicate ? '이미 사용 중인 공동체 이름이에요' : friendlyError(churchErr));
+      setError(duplicate ? t('duplicateCommunityName') : friendlyError(churchErr));
       setLoading(false);
       return;
     }
@@ -55,18 +57,18 @@ export default function CreateCommunity() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
-          <Text style={styles.backText}>‹ 뒤로</Text>
+          <Text style={styles.backText}>‹ {t('back')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>공동체 만들기</Text>
-        <Text style={styles.subtitle}>새로운 공동체를 시작하세요{'\n'}관리자 권한이 부여됩니다</Text>
+        <Text style={styles.title}>{t('createCommunityTitle')}</Text>
+        <Text style={styles.subtitle}>{t('createCommunitySubtitle')}</Text>
 
-        <Text style={styles.label}>공동체 이름 *</Text>
+        <Text style={styles.label}>{t('communityNameLabel')}</Text>
         {inputReady ? (
           <TextInput
             ref={nameRef}
             style={styles.input}
-            placeholder="VKPC 밴쿠버 한인 장로교회"
+            placeholder={t('communityNamePlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={name}
             onChangeText={setName}
@@ -79,8 +81,8 @@ export default function CreateCommunity() {
 
         <View style={styles.toggleRow}>
           <View>
-            <Text style={styles.toggleLabel}>공개 공동체</Text>
-            <Text style={styles.toggleSub}>검색으로 찾을 수 있어요</Text>
+            <Text style={styles.toggleLabel}>{t('publicCommunity')}</Text>
+            <Text style={styles.toggleSub}>{t('publicCommunitySub')}</Text>
           </View>
           <Switch
             value={isPublic}
@@ -96,7 +98,7 @@ export default function CreateCommunity() {
           onPress={create}
           disabled={!name.trim() || loading}
         >
-          <Text style={styles.btnText}>{loading ? '...' : '만들기 / Create'}</Text>
+          <Text style={styles.btnText}>{loading ? '...' : t('createBtn')}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

@@ -40,7 +40,7 @@ export default function PendingScreen() {
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
-        <Text style={styles.backText}>‹ 뒤로</Text>
+        <Text style={styles.backText}>‹ {t('back')}</Text>
       </TouchableOpacity>
       <Text style={styles.icon}>🙏</Text>
       <Text style={styles.title}>{t('pendingTitle')}</Text>
