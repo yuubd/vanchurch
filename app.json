@@ -6,7 +6,7 @@
       "en": "./locales/en.json",
       "ko": "./locales/ko.json"
     },
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
