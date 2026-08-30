@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, RefreshControl } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Share, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../lib/supabase';
@@ -7,8 +7,9 @@ import { useTranslation, Lang } from '../../lib/i18n';
 import { clearBiometrics } from '../../lib/biometrics';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { isValidDate } from '../../lib/dob';
 
-type Profile = { name: string; roles: string[]; church_id: string | null; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
+type Profile = { name: string; date_of_birth: string | null; roles: string[]; church_id: string | null; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
 
 function formatPhone(raw: string | null): string {
   if (!raw) return '—';
@@ -31,6 +32,10 @@ export default function ProfileScreen() {
   const [destroying, setDestroying] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDob, setEditDob] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const { lang, setLang, t } = useTranslation();
   const router = useRouter();
 
@@ -46,10 +51,29 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data } = await supabase
       .from('users')
-      .select('name, roles, church_id, cells!users_cell_id_fkey(name), churches(name, invite_token)')
+      .select('name, date_of_birth, roles, church_id, cells!users_cell_id_fkey(name), churches(name, invite_token)')
       .eq('id', user!.id)
       .single();
     setProfile({ ...(data as any), phone: user?.phone ?? null });
+  }
+
+  function startEditProfile() {
+    if (!profile) return;
+    setEditName(profile.name);
+    setEditDob(profile.date_of_birth ?? '');
+    setEditingProfile(true);
+  }
+
+  async function saveProfile() {
+    const trimmed = editName.trim();
+    if (!trimmed || (editDob && !isValidDate(editDob))) return;
+    setSavingProfile(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('users').update({ name: trimmed, date_of_birth: editDob || null }).eq('id', user!.id);
+    setSavingProfile(false);
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
+    setEditingProfile(false);
+    loadProfile();
   }
 
   function confirmDestroy() {
@@ -68,7 +92,7 @@ export default function ProfileScreen() {
     setDestroying(true);
     const { error } = await supabase.rpc('destroy_church', { target_church_id: profile.church_id });
     setDestroying(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 
@@ -129,7 +153,7 @@ export default function ProfileScreen() {
       .update({ church_id: null, cell_id: null, roles: ['member'] })
       .eq('id', user.id);
     setLeaving(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
     router.replace('/(auth)/onboarding');
   }
 
@@ -162,15 +186,45 @@ export default function ProfileScreen() {
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
       {profile && (
         <View>
-          <View style={[styles.section, styles.row]}>
-            <View style={styles.half}>
+          <View style={styles.section}>
+            <View style={styles.labelRow}>
               <Text style={styles.label}>{t('name')}</Text>
-              <Text style={styles.value}>{profile.name}</Text>
+              {!editingProfile && (
+                <TouchableOpacity onPress={startEditProfile} hitSlop={8}>
+                  <Text style={styles.editLink}>{t('edit')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.half}>
-              <Text style={styles.label}>{t('phoneNumber')}</Text>
-              <Text style={styles.value}>{formatPhone(profile.phone)}</Text>
-            </View>
+            {editingProfile ? (
+              <>
+                <TextInput style={styles.editInput} value={editName} onChangeText={setEditName} placeholder={t('namePlaceholder')} placeholderTextColor="#9CA3AF" />
+                <Text style={[styles.label, styles.editSecondLabel]}>{t('dateOfBirth')}</Text>
+                <TextInput style={styles.editInput} value={editDob} onChangeText={setEditDob} placeholder={t('dateOfBirthPlaceholder')} placeholderTextColor="#9CA3AF" keyboardType="numbers-and-punctuation" />
+                {!!editDob && !isValidDate(editDob) && <Text style={styles.editError}>{t('dateOfBirthInvalid')}</Text>}
+                <View style={styles.editBtnRow}>
+                  <TouchableOpacity style={styles.editCancelBtn} onPress={() => setEditingProfile(false)}>
+                    <Text style={styles.editCancelText}>{t('cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editSaveBtn, (!editName.trim() || (!!editDob && !isValidDate(editDob)) || savingProfile) && styles.disabled]}
+                    onPress={saveProfile}
+                    disabled={!editName.trim() || (!!editDob && !isValidDate(editDob)) || savingProfile}
+                  >
+                    <Text style={styles.editSaveText}>{savingProfile ? '...' : t('save')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.value}>{profile.name}</Text>
+                <Text style={styles.dobValue}>{t('dateOfBirth')}: {profile.date_of_birth ?? '—'}</Text>
+              </>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>{t('phoneNumber')}</Text>
+            <Text style={styles.value}>{formatPhone(profile.phone)}</Text>
           </View>
 
           <View style={styles.section}>
@@ -249,12 +303,21 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingTop: 60 },
   pageTitle: { fontSize: 26, fontWeight: '800', color: '#111827', letterSpacing: -0.5, marginBottom: 28 },
   section: { paddingVertical: 16, borderBottomWidth: 1, borderColor: '#f0f0f0' },
-  row: { flexDirection: 'row', gap: 16 },
-  half: { flex: 1 },
   label: { fontSize: 12, color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   value: { fontSize: 16, color: '#111', fontWeight: '500' },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   leaveLink: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
+  editLink: { fontSize: 13, color: '#2563EB', fontWeight: '600' },
+  dobValue: { fontSize: 13, color: '#9CA3AF', marginTop: 6 },
+  editInput: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10, padding: 12, fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB' },
+  editSecondLabel: { marginTop: 14 },
+  editError: { fontSize: 12, color: '#DC2626', marginTop: 6 },
+  editBtnRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  editCancelBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
+  editCancelText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
+  editSaveBtn: { flex: 1, backgroundColor: '#2563EB', borderRadius: 10, padding: 12, alignItems: 'center' },
+  editSaveText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  disabled: { opacity: 0.5 },
   badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   badge: { fontSize: 13, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   langToggle: { flexDirection: 'row', gap: 8 },

@@ -42,7 +42,10 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: cors });
     }
 
-    const { name, phone, cellId: requestedCellId } = await req.json();
+    const { name, phone, cellId: requestedCellId, dateOfBirth } = await req.json();
+    if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+      return new Response(JSON.stringify({ error: "Invalid date of birth" }), { status: 400, headers: cors });
+    }
     if (!phone) {
       return new Response(JSON.stringify({ error: "Missing phone" }), { status: 400, headers: cors });
     }
@@ -86,7 +89,7 @@ Deno.serve(async (req: Request) => {
     // handle_new_user() trigger already inserted a default public.users row for created.user.id.
     const { error: updateErr } = await admin
       .from("users")
-      .update({ name: name?.trim() ?? "", church_id: churchId, cell_id: cellId, roles: ["member"] })
+      .update({ name: name?.trim() ?? "", date_of_birth: dateOfBirth || null, church_id: churchId, cell_id: cellId, roles: ["member"] })
       .eq("id", created.user.id);
     if (updateErr) {
       return new Response(JSON.stringify({ error: updateErr.message }), { status: 500, headers: cors });

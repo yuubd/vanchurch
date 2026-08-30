@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { isValidDate } from '../../lib/dob';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
@@ -56,6 +57,7 @@ export default function MembersScreen() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newDob, setNewDob] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [addError, setAddError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -102,11 +104,23 @@ export default function MembersScreen() {
   }
 
   async function approveRequest(req: JoinRequest) {
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      supabase.from('join_requests').update({ status: 'approved' }).eq('id', req.id),
-      supabase.from('users').update({ church_id: myChurchId, roles: ['member'] }).eq('id', req.user_id),
-    ]);
-    if (e1 || e2) { showAlert('오류', friendlyError(e1 ?? e2)); return; }
+    // Conditional on church_id IS NULL so this can't silently no-op (and still flip
+    // join_requests to 'approved') if the person joined a different community in the
+    // meantime — RLS would otherwise block the update with 0 rows affected and no error.
+    const { data: updated, error: userErr } = await supabase
+      .from('users')
+      .update({ church_id: myChurchId, roles: ['member'] })
+      .eq('id', req.user_id)
+      .is('church_id', null)
+      .select('id');
+    if (userErr) { showAlert('오류', friendlyError(userErr)); return; }
+    if (!updated || updated.length === 0) {
+      showAlert(t('error'), t('alreadyInAnotherCommunity'));
+      loadData();
+      return;
+    }
+    const { error: reqErr } = await supabase.from('join_requests').update({ status: 'approved' }).eq('id', req.id);
+    if (reqErr) { showAlert('오류', friendlyError(reqErr)); return; }
     loadData();
   }
 
@@ -118,11 +132,12 @@ export default function MembersScreen() {
 
   async function addMember() {
     if (newPhone.replace(/\D/g, '').length < 10) return;
+    if (newDob && !isValidDate(newDob)) return;
     if (!myChurchId) return;
     setAddingMember(true);
     setAddError('');
     const { error } = await supabase.functions.invoke('add-member', {
-      body: { name: newName.trim(), phone: newPhone },
+      body: { name: newName.trim(), phone: newPhone, dateOfBirth: newDob || undefined },
     });
     setAddingMember(false);
     if (error) {
@@ -133,6 +148,7 @@ export default function MembersScreen() {
     setShowAddMember(false);
     setNewName('');
     setNewPhone('');
+    setNewDob('');
     loadData();
   }
 
@@ -253,16 +269,26 @@ export default function MembersScreen() {
             value={newPhone}
             onChangeText={setNewPhone}
           />
+          <Text style={styles.label}>{t('dateOfBirth')}</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder={t('dateOfBirthPlaceholder')}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numbers-and-punctuation"
+            value={newDob}
+            onChangeText={setNewDob}
+          />
+          {!!newDob && !isValidDate(newDob) && <Text style={styles.addError}>{t('dateOfBirthInvalid')}</Text>}
           <Text style={styles.addHint}>{t('addMemberHint')}</Text>
           {!!addError && <Text style={styles.addError}>{addError}</Text>}
           <TouchableOpacity
-            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || addingMember) && styles.disabled]}
+            style={[styles.saveBtn, (newPhone.replace(/\D/g, '').length < 10 || (!!newDob && !isValidDate(newDob)) || addingMember) && styles.disabled]}
             onPress={addMember}
-            disabled={newPhone.replace(/\D/g, '').length < 10 || addingMember}
+            disabled={newPhone.replace(/\D/g, '').length < 10 || (!!newDob && !isValidDate(newDob)) || addingMember}
           >
             <Text style={styles.saveBtnText}>{addingMember ? '...' : t('add')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddMember(false)}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAddMember(false); setNewDob(''); }}>
             <Text style={styles.cancelText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>

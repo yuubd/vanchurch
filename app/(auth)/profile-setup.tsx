@@ -6,9 +6,11 @@ import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { useTranslation } from '../../lib/i18n';
+import { isValidDate } from '../../lib/dob';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
+  const [dob, setDob] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
@@ -19,17 +21,12 @@ export default function ProfileSetup() {
     if (inputReady) nameRef.current?.focus();
   }, [inputReady]);
 
-  async function logout() {
-    await supabase.auth.signOut();
-    router.replace('/(auth)/login');
-  }
-
   async function save() {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || !isValidDate(dob)) return;
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('users').update({ name: trimmed }).eq('id', user?.id);
+    const { error } = await supabase.from('users').update({ name: trimmed, date_of_birth: dob }).eq('id', user?.id);
     if (error) {
       setLoading(false);
       showAlert(t('error'), friendlyError(error));
@@ -74,15 +71,24 @@ export default function ProfileSetup() {
         ) : (
           <View style={styles.input} />
         )}
+        <Text style={styles.label}>{t('dateOfBirth')}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder={t('dateOfBirthPlaceholder')}
+          placeholderTextColor="#9CA3AF"
+          value={dob}
+          onChangeText={setDob}
+          keyboardType="numbers-and-punctuation"
+          returnKeyType="done"
+          onSubmitEditing={save}
+        />
+        {!!dob && !isValidDate(dob) && <Text style={styles.error}>{t('dateOfBirthInvalid')}</Text>}
         <TouchableOpacity
-          style={[styles.btn, (!name.trim() || loading) && styles.btnDisabled]}
+          style={[styles.btn, (!name.trim() || !isValidDate(dob) || loading) && styles.btnDisabled]}
           onPress={save}
-          disabled={!name.trim() || loading}
+          disabled={!name.trim() || !isValidDate(dob) || loading}
         >
           <Text style={styles.btnText}>{loading ? '...' : t('confirm')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -99,6 +105,5 @@ const styles = StyleSheet.create({
   btn: { backgroundColor: '#1D3FAA', borderRadius: 14, padding: 18, alignItems: 'center' },
   btnDisabled: { opacity: 0.4 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  logoutBtn: { alignItems: 'center', paddingVertical: 20 },
-  logoutText: { fontSize: 14, color: '#9CA3AF' },
+  error: { color: '#DC2626', fontSize: 13, marginBottom: 12, marginTop: -12 },
 });
