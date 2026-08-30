@@ -17,15 +17,15 @@ export default function Onboarding() {
       <View style={styles.top}>
         <Text style={styles.logo}>⛪</Text>
         <Text style={styles.title}>{t('brandName')}</Text>
-        <Text style={styles.sub}>공동체를 만들거나{'\n'}기존 공동체에 참여하세요</Text>
+        <Text style={styles.sub}>{t('onboardingSubtitle')}</Text>
       </View>
 
       <View style={styles.options}>
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(auth)/create-community')}>
           <Text style={styles.cardIcon}>✨</Text>
           <View style={styles.cardText}>
-            <Text style={styles.cardTitle}>공동체 만들기</Text>
-            <Text style={styles.cardSub}>Create a community</Text>
+            <Text style={styles.cardTitle}>{t('createCommunityCard')}</Text>
+            <Text style={styles.cardSub}>{t('createCommunityCardSub')}</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
@@ -33,8 +33,8 @@ export default function Onboarding() {
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(auth)/find-community')}>
           <Text style={styles.cardIcon}>🔍</Text>
           <View style={styles.cardText}>
-            <Text style={styles.cardTitle}>공동체 참여하기</Text>
-            <Text style={styles.cardSub}>Find & join a community</Text>
+            <Text style={styles.cardTitle}>{t('findCommunityCard')}</Text>
+            <Text style={styles.cardSub}>{t('findCommunityCardSub')}</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>

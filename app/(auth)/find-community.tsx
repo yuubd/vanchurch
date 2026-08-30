@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { useTranslation } from '../../lib/i18n';
 
 type Church = { id: string; name: string };
 type PendingRequest = { id: string; churches: { name: string } | null };
@@ -19,6 +20,7 @@ export default function FindCommunity() {
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const searchReady = useDelayedMount();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadChurches();
@@ -55,7 +57,7 @@ export default function FindCommunity() {
     setCancelling(true);
     const { error } = await supabase.from('join_requests').delete().eq('id', pending.id);
     setCancelling(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
     setPending(null);
   }
 
@@ -74,7 +76,7 @@ export default function FindCommunity() {
       { onConflict: 'user_id,church_id' }
     );
     setLoading(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
     router.replace({ pathname: '/(auth)/pending', params: { churchName: selected.name } });
   }
 
@@ -82,28 +84,32 @@ export default function FindCommunity() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={styles.back}>
-          <Text style={styles.backText}>‹ 뒤로</Text>
+          <Text style={styles.backText}>‹ {t('back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>공동체 찾기</Text>
-        <Text style={styles.subtitle}>참여할 공동체를 검색하세요</Text>
+        <Text style={styles.title}>{t('findCommunityTitle')}</Text>
+        <Text style={styles.subtitle}>{t('findCommunitySubtitle')}</Text>
       </View>
 
-      {pending && (
-        <View style={styles.pendingBanner}>
-          <Text style={styles.pendingText}>
-            <Text style={styles.pendingChurch}>{pending.churches?.name ?? ''}</Text>
-            {'에 참여 요청을 보냈어요'}
-          </Text>
-          <TouchableOpacity onPress={cancelPending} disabled={cancelling} hitSlop={8}>
-            <Text style={styles.pendingCancel}>{cancelling ? '...' : '취소'}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {pending && (() => {
+        const [before, after] = t('requestSentTo').split('%');
+        return (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingText}>
+              {before}
+              <Text style={styles.pendingChurch}>{pending.churches?.name ?? ''}</Text>
+              {after}
+            </Text>
+            <TouchableOpacity onPress={cancelPending} disabled={cancelling} hitSlop={8}>
+              <Text style={styles.pendingCancel}>{cancelling ? '...' : t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {searchReady ? (
         <TextInput
           style={styles.search}
-          placeholder="공동체 이름 검색..."
+          placeholder={t('searchCommunityPlaceholder')}
           placeholderTextColor="#9CA3AF"
           value={query}
           onChangeText={setQuery}
@@ -127,10 +133,10 @@ export default function FindCommunity() {
             {selected?.id === item.id && <Text style={styles.check}>✓</Text>}
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>검색 결과가 없습니다</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('noSearchResults')}</Text>}
         ListFooterComponent={
           <TouchableOpacity onPress={() => router.replace('/(auth)/create-community')} style={styles.createLink}>
-            <Text style={styles.createLinkText}>+ 공동체 직접 만들기</Text>
+            <Text style={styles.createLinkText}>{t('createCommunityDirectly')}</Text>
           </TouchableOpacity>
         }
         keyboardShouldPersistTaps="handled"
@@ -142,7 +148,7 @@ export default function FindCommunity() {
           onPress={requestJoin}
           disabled={!selected || loading || !!pending}
         >
-          <Text style={styles.btnText}>{loading ? '...' : '참여 요청 / Request to join'}</Text>
+          <Text style={styles.btnText}>{loading ? '...' : t('requestToJoin')}</Text>
         </TouchableOpacity>
       </View>
     </View>

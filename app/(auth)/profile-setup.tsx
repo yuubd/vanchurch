@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { useTranslation } from '../../lib/i18n';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
@@ -12,6 +13,7 @@ export default function ProfileSetup() {
   const router = useRouter();
   const nameRef = useRef<TextInput>(null);
   const inputReady = useDelayedMount();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (inputReady) nameRef.current?.focus();
@@ -30,7 +32,7 @@ export default function ProfileSetup() {
     const { error } = await supabase.from('users').update({ name: trimmed }).eq('id', user?.id);
     if (error) {
       setLoading(false);
-      showAlert('오류', friendlyError(error));
+      showAlert(t('error'), friendlyError(error));
       return;
     }
 
@@ -55,14 +57,14 @@ export default function ProfileSetup() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
-        <Text style={styles.title}>프로필 설정</Text>
-        <Text style={styles.subtitle}>이름을 입력해주세요</Text>
-        <Text style={styles.label}>이름</Text>
+        <Text style={styles.title}>{t('profileSetupTitle')}</Text>
+        <Text style={styles.subtitle}>{t('profileSetupSubtitle')}</Text>
+        <Text style={styles.label}>{t('name')}</Text>
         {inputReady ? (
           <TextInput
             ref={nameRef}
             style={styles.input}
-            placeholder="홍길동"
+            placeholder={t('namePlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={name}
             onChangeText={setName}
@@ -77,10 +79,10 @@ export default function ProfileSetup() {
           onPress={save}
           disabled={!name.trim() || loading}
         >
-          <Text style={styles.btnText}>{loading ? '...' : '다음 / Next'}</Text>
+          <Text style={styles.btnText}>{loading ? '...' : t('confirm')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <Text style={styles.logoutText}>로그아웃</Text>
+          <Text style={styles.logoutText}>{t('logout')}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
