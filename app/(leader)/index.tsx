@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type PrayerRequest = {
   id: string;
@@ -56,6 +57,8 @@ export default function LeaderPrayers() {
     await loadRequests(cellId, myId);
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   useEffect(() => {
     init();

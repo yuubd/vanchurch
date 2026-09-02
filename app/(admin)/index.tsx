@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Stats = { members: number; cells: number; attended: number };
 type Prayer = { id: string; body: string; created_at: string; prayCount: number };
@@ -44,6 +45,8 @@ export default function AdminHome() {
     await loadData();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();

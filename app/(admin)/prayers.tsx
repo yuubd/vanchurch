@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 function getWeekRange(offset: number, lang: string): { start: string; end: string; label: string } {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
@@ -48,6 +49,8 @@ export default function PrayersScreen() {
     await loadRequests(myId);
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   useEffect(() => {
     init();
