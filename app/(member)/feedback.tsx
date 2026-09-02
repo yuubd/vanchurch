@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type FeedbackItem = { id: string; body: string; created_at: string };
 
@@ -22,6 +23,8 @@ export default function FeedbackScreen() {
     await loadFeedback(userId);
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();

@@ -6,6 +6,7 @@ import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { useTranslation } from '../../lib/i18n';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Church = { id: string; name: string };
 type PendingRequest = { id: string; churches: { name: string } | null };
@@ -37,6 +38,8 @@ export default function FindCommunity() {
     await Promise.all([loadChurches(), loadPending()]);
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadPending() {
     const { data: { user } } = await supabase.auth.getUser();

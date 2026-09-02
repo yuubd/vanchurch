@@ -8,6 +8,7 @@ import { clearBiometrics } from '../../lib/biometrics';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { isValidDate } from '../../lib/dob';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Profile = { name: string; date_of_birth: string | null; roles: string[]; church_id: string | null; cells: { name: string } | null; churches: { name: string; invite_token: string } | null; phone: string | null };
 
@@ -46,6 +47,8 @@ export default function ProfileScreen() {
     await loadProfile();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();

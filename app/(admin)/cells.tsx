@@ -7,6 +7,7 @@ import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { isValidDate } from '../../lib/dob';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Leader = { id: string; name: string };
 type Cell = { id: string; name: string; leader_id: string | null; sub_leader_ids: string[]; leader: { name: string } | null };
@@ -40,6 +41,8 @@ export default function CellsScreen() {
     await loadData();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();

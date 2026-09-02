@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type FeedbackItem = { id: string; body: string; created_at: string; userName: string; cellName: string };
 
@@ -17,6 +18,8 @@ export default function AdminFeedbackScreen() {
     await loadFeedback();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadFeedback() {
     const [{ data: feedbackData }, { data: allUsers }] = await Promise.all([

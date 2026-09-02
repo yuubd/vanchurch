@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Prayer = { id: string; body: string; created_at: string; prayCount: number; prayedByMe: boolean; authorName?: string; isMine: boolean };
 
@@ -28,6 +29,8 @@ export default function MemberHome() {
     await loadData();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();

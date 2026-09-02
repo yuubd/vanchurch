@@ -6,6 +6,7 @@ import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { isValidDate } from '../../lib/dob';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Member = { id: string; name: string; present: boolean };
 
@@ -52,6 +53,8 @@ export default function LeaderMembers() {
     if (cellId) await loadAttendance();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function loadCell() {
     const { data: { user } } = await supabase.auth.getUser();

@@ -7,6 +7,7 @@ import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { isValidDate } from '../../lib/dob';
+import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
@@ -102,6 +103,8 @@ export default function MembersScreen() {
     await loadData();
     setRefreshing(false);
   }
+
+  useWebPullToRefresh(onRefresh);
 
   async function approveRequest(req: JoinRequest) {
     // Conditional on church_id IS NULL so this can't silently no-op (and still flip
