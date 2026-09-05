@@ -182,7 +182,7 @@ export default function MemberHome() {
         keyExtractor={() => ''}
         renderItem={null}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={60} />}
         ListHeaderComponent={
           <View>
             <Text style={styles.greeting}>{t('greeting')}, {name}{t('greetingSuffix')}</Text>

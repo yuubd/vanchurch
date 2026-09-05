@@ -80,7 +80,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="index"   options={{ title: t('home'),          tabBarIcon: ({ focused }) => <TabIcon name="home"    focused={focused} /> }} />
       <Tabs.Screen name="prayers" options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"   focused={focused} />, href: isPastor ? undefined : null }} />
       <Tabs.Screen name="members" options={{ title: t('members'), tabBarIcon: ({ focused }) => <TabIcon name="people" focused={focused} />, tabBarBadge: pendingCount > 0 ? pendingCount : undefined }} />
-      <Tabs.Screen name="attendance" options={{ title: t('attendance'), tabBarIcon: ({ focused }) => <TabIcon name="checkmark-circle" focused={focused} />, href: hasCell ? undefined : null }} />
+      <Tabs.Screen name="attendance" options={{ title: t('attendance'), tabBarIcon: ({ focused }) => <TabIcon name="checkmark-circle" focused={focused} />, href: isPastor && hasCell ? undefined : null }} />
       <Tabs.Screen name="cells"   options={{ title: t('cells'),          tabBarIcon: ({ focused }) => <TabIcon name="grid"    focused={focused} /> }} />
       <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person"  focused={focused} /> }} />
