@@ -120,7 +120,7 @@ export default function CellsScreen() {
     if (newMemberDob && !isValidDate(newMemberDob)) return;
     setAddingMember(true);
     setAddMemberError('');
-    const { data, error } = await supabase.functions.invoke('add-member', {
+    const { error } = await supabase.functions.invoke('add-member', {
       body: { name: newMemberName.trim(), phone: newMemberPhone, cellId: editing.id, dateOfBirth: newMemberDob || undefined },
     });
     setAddingMember(false);
@@ -129,11 +129,11 @@ export default function CellsScreen() {
       setAddMemberError(body?.error ?? '멤버 추가에 실패했습니다');
       return;
     }
-    if (data?.id) setMemberIds(prev => new Set(prev).add(data.id));
     setShowAddMember(false);
     setNewMemberName('');
     setNewMemberPhone('');
     setNewMemberDob('');
+    showAlert(t('addMember'), t('addMemberSent'));
     loadData();
   }
 

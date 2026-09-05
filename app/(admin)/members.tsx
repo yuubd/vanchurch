@@ -12,6 +12,7 @@ import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
 type JoinRequest = { id: string; user_id: string; created_at: string; users: { name: string; phone?: string } | null };
+type PendingInvite = { id: string; name: string; phone: string; created_at: string };
 
 const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
 
@@ -55,6 +56,7 @@ export default function MembersScreen() {
   const [myRoles, setMyRoles] = useState<string[]>([]);
   const [myChurchId, setMyChurchId] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -90,12 +92,25 @@ export default function MembersScreen() {
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
       );
+      queries.push(
+        supabase.from('pending_invites')
+          .select('id, name, phone, created_at')
+          .eq('church_id', churchId)
+          .order('created_at', { ascending: true })
+      );
     }
 
-    const [{ data: memberData }, { data: cellData }, joinRes] = await Promise.all(queries);
+    const [{ data: memberData }, { data: cellData }, joinRes, inviteRes] = await Promise.all(queries);
     setMembers((memberData ?? []) as any);
     setCells(cellData ?? []);
     setJoinRequests((joinRes?.data ?? []) as any);
+    setPendingInvites((inviteRes?.data ?? []) as any);
+  }
+
+  async function cancelInvite(id: string) {
+    const { error } = await supabase.from('pending_invites').delete().eq('id', id);
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
+    loadData();
   }
 
   async function onRefresh() {
@@ -152,6 +167,7 @@ export default function MembersScreen() {
     setNewName('');
     setNewPhone('');
     setNewDob('');
+    showAlert(t('addMember'), t('addMemberSent'));
     loadData();
   }
 
@@ -225,6 +241,23 @@ export default function MembersScreen() {
                   <Text style={styles.approveText}>{t('approve')}</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {pendingInvites.length > 0 && (
+        <View style={styles.pendingSection}>
+          <Text style={styles.pendingHeader}>{t('invitedPending')} ({pendingInvites.length})</Text>
+          {pendingInvites.map(inv => (
+            <View key={inv.id} style={styles.pendingRow}>
+              <View style={styles.pendingInfo}>
+                <Text style={styles.pendingName}>{inv.name}</Text>
+                <Text style={styles.pendingDate}>{new Date(inv.created_at).toLocaleDateString()}</Text>
+              </View>
+              <TouchableOpacity style={styles.rejectBtn} onPress={() => cancelInvite(inv.id)}>
+                <Text style={styles.rejectText}>{t('cancel')}</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>

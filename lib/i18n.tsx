@@ -173,6 +173,13 @@ const strings = {
     dateOfBirthPlaceholder: 'YYYY-MM-DD',
     dateOfBirthRequired: '생년월일을 입력해주세요',
     dateOfBirthInvalid: '생년월일 형식이 올바르지 않아요 (YYYY-MM-DD)',
+    addMemberSent: '초대를 보냈어요. 상대방이 본인 번호로 인증하면 가입이 완료돼요',
+    invitedPending: '초대됨',
+    inviteConfirmTitle: '초대를 받았어요',
+    inviteConfirmSubtitle: '%에 초대되었어요',
+    acceptInvite: '수락하기',
+    declineInvite: '거절하기',
+    declineInviteConfirm: '이 초대를 거절하시겠어요?',
   },
   en: {
     // Nav
@@ -343,6 +350,13 @@ const strings = {
     dateOfBirthPlaceholder: 'YYYY-MM-DD',
     dateOfBirthRequired: 'Please enter your date of birth',
     dateOfBirthInvalid: 'Date of birth must be in YYYY-MM-DD format',
+    addMemberSent: "Invite sent. They'll be added once they verify their own number",
+    invitedPending: 'Invited',
+    inviteConfirmTitle: "You've been invited",
+    inviteConfirmSubtitle: "You've been invited to join %",
+    acceptInvite: 'Accept',
+    declineInvite: 'Decline',
+    declineInviteConfirm: 'Decline this invite?',
   },
 };
 
