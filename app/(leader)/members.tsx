@@ -9,6 +9,7 @@ import { isValidDate } from '../../lib/dob';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Member = { id: string; name: string; present: boolean };
+type PendingInvite = { id: string; name: string; phone: string; created_at: string };
 
 function getDateLabel(date: Date, lang: string) {
   const locale = lang === 'en' ? 'en-US' : 'ko-KR';
@@ -39,6 +40,7 @@ export default function LeaderMembers() {
   const [newDob, setNewDob] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [addError, setAddError] = useState('');
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const nameInputRef = useRef<TextInput>(null);
 
   const sunday = getThisSunday(weekOffset);
@@ -62,12 +64,20 @@ export default function LeaderMembers() {
     if (!me?.cell_id) return;
     setCellId(me.cell_id);
 
-    const [{ data: cell }, { data: memberData }] = await Promise.all([
+    const [{ data: cell }, { data: memberData }, { data: inviteData }] = await Promise.all([
       supabase.from('cells').select('name').eq('id', me.cell_id).single(),
       supabase.from('users').select('id, name').eq('cell_id', me.cell_id).order('name'),
+      supabase.from('pending_invites').select('id, name, phone, created_at').eq('cell_id', me.cell_id).order('created_at', { ascending: true }),
     ]);
     setCellName(cell?.name ?? '');
     setMembers((memberData ?? []).map(m => ({ ...m, present: false })));
+    setPendingInvites(inviteData ?? []);
+  }
+
+  async function cancelInvite(id: string) {
+    const { error } = await supabase.from('pending_invites').delete().eq('id', id);
+    if (error) { showAlert(t('error'), friendlyError(error)); return; }
+    loadCell();
   }
 
   async function loadAttendance() {
@@ -123,6 +133,7 @@ export default function LeaderMembers() {
     setNewName('');
     setNewPhone('');
     setNewDob('');
+    showAlert(t('addMember'), t('addMemberSent'));
     loadCell();
   }
 
@@ -148,6 +159,20 @@ export default function LeaderMembers() {
       </View>
 
       <Text style={styles.summary}>{presentCount} / {members.length}{t('attendanceSummary')}</Text>
+
+      {pendingInvites.length > 0 && (
+        <View style={styles.pendingSection}>
+          <Text style={styles.pendingHeader}>{t('invitedPending')} ({pendingInvites.length})</Text>
+          {pendingInvites.map(inv => (
+            <View key={inv.id} style={styles.pendingRow}>
+              <Text style={styles.pendingName}>{inv.name}</Text>
+              <TouchableOpacity onPress={() => cancelInvite(inv.id)} hitSlop={8}>
+                <Text style={styles.pendingCancel}>{t('cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
 
       <FlatList
         data={members}
@@ -242,6 +267,11 @@ const styles = StyleSheet.create({
   navBtn: { padding: 4 },
   dateLabel: { fontSize: 16, fontWeight: '700', color: '#111827', minWidth: 140, textAlign: 'center' },
   summary: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 10 },
+  pendingSection: { backgroundColor: '#FFFBEB', borderBottomWidth: 1, borderColor: '#FEF3C7', paddingHorizontal: 20, paddingVertical: 12 },
+  pendingHeader: { fontSize: 12, fontWeight: '700', color: '#92400E', marginBottom: 8 },
+  pendingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  pendingName: { fontSize: 14, color: '#111827', fontWeight: '600' },
+  pendingCancel: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   list: { paddingHorizontal: 20, paddingBottom: 100 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 18, borderBottomWidth: 1, borderColor: '#F9FAFB' },
   name: { fontSize: 16, fontWeight: '600', color: '#111827' },

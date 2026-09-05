@@ -73,6 +73,16 @@ export default function RootLayout() {
       return;
     }
 
+    // An admin/cell leader may have invited this phone number before it ever signed up —
+    // let them accept/decline before falling into normal onboarding.
+    if (!data.church_id) {
+      const { data: invite } = await supabase.rpc('get_my_pending_invite');
+      if (invite && invite.length > 0) {
+        router.replace('/(auth)/invite-confirm');
+        return;
+      }
+    }
+
     // Incomplete onboarding: needs name
     if (!data.name) {
       router.replace('/(auth)/profile-setup');

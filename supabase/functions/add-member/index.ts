@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-function toE164(raw: string): string {
+function toE164Digits(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.startsWith("1") && digits.length === 11) return digits;
   return "1" + digits;
@@ -49,7 +49,10 @@ Deno.serve(async (req: Request) => {
     if (!phone) {
       return new Response(JSON.stringify({ error: "Missing phone" }), { status: 400, headers: cors });
     }
-    const e164 = "+" + toE164(phone);
+    if (!name?.trim()) {
+      return new Response(JSON.stringify({ error: "Missing name" }), { status: 400, headers: cors });
+    }
+    const phoneDigits = toE164Digits(phone);
 
     const churchId = callerProfile.church_id;
     let cellId: string | null;
@@ -75,27 +78,28 @@ Deno.serve(async (req: Request) => {
 
     const admin = createClient(url, serviceKey);
 
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      phone: e164,
-      phone_confirm: true,
-    });
-    if (createErr || !created.user) {
-      const msg = createErr?.message?.includes("already been registered")
-        ? "이미 등록된 번호입니다"
-        : createErr?.message ?? "Failed to create member";
-      return new Response(JSON.stringify({ error: msg }), { status: 400, headers: cors });
+    // Don't create a real account here — that would let anyone enroll a phone number they
+    // don't control. Instead, queue an invite the phone's actual owner must accept by
+    // verifying their own number via normal OTP signup (see get_my_pending_invite /
+    // accept_invite). If they already have an account elsewhere, block the invite.
+    const { data: existing } = await admin.from("users").select("church_id").eq("phone", phoneDigits).maybeSingle();
+    if (existing?.church_id) {
+      return new Response(JSON.stringify({ error: "이미 다른 커뮤니티에 속해 있습니다" }), { status: 400, headers: cors });
     }
 
-    // handle_new_user() trigger already inserted a default public.users row for created.user.id.
-    const { error: updateErr } = await admin
-      .from("users")
-      .update({ name: name?.trim() ?? "", date_of_birth: dateOfBirth || null, church_id: churchId, cell_id: cellId, roles: ["member"] })
-      .eq("id", created.user.id);
-    if (updateErr) {
-      return new Response(JSON.stringify({ error: updateErr.message }), { status: 500, headers: cors });
+    const { error: inviteErr } = await admin.from("pending_invites").upsert({
+      phone: phoneDigits,
+      name: name.trim(),
+      date_of_birth: dateOfBirth || null,
+      church_id: churchId,
+      cell_id: cellId,
+      invited_by: caller.id,
+    }, { onConflict: "phone,church_id" });
+    if (inviteErr) {
+      return new Response(JSON.stringify({ error: inviteErr.message }), { status: 500, headers: cors });
     }
 
-    return new Response(JSON.stringify({ id: created.user.id }), {
+    return new Response(JSON.stringify({ invited: true }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
