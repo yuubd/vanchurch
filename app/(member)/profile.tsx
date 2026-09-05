@@ -125,7 +125,7 @@ export default function ProfileScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={60} />}
     >
       <Text style={styles.pageTitle}>{t('myProfile')}</Text>
       {profile && (
