@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { useTranslation } from '../../lib/i18n';
-import { isValidDate } from '../../lib/dob';
+import { isValidDate, formatDobInput } from '../../lib/dob';
 
 type Invite = { id: string; name: string; date_of_birth: string | null; church_name: string; cell_name: string | null };
 
@@ -99,7 +99,7 @@ export default function InviteConfirm() {
           placeholder={t('dateOfBirthPlaceholder')}
           placeholderTextColor="#9CA3AF"
           value={dob}
-          onChangeText={setDob}
+          onChangeText={v => setDob(formatDobInput(v))}
           keyboardType="numbers-and-punctuation"
           returnKeyType="done"
         />

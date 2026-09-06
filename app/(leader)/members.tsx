@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
-import { isValidDate } from '../../lib/dob';
+import { isValidDate, formatDobInput } from '../../lib/dob';
+import { formatPhoneInput } from '../../lib/phone';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Member = { id: string; name: string; present: boolean };
@@ -217,7 +218,7 @@ export default function LeaderMembers() {
             placeholderTextColor="#9CA3AF"
             keyboardType="phone-pad"
             value={newPhone}
-            onChangeText={setNewPhone}
+            onChangeText={v => setNewPhone(formatPhoneInput(v))}
           />
           <Text style={styles.modalLabel}>{t('dateOfBirth')}</Text>
           <TextInput
@@ -226,7 +227,7 @@ export default function LeaderMembers() {
             placeholderTextColor="#9CA3AF"
             keyboardType="numbers-and-punctuation"
             value={newDob}
-            onChangeText={setNewDob}
+            onChangeText={v => setNewDob(formatDobInput(v))}
           />
           {!!newDob && !isValidDate(newDob) && <Text style={styles.addError}>{t('dateOfBirthInvalid')}</Text>}
           <Text style={styles.addHint}>{t('addMemberHint')}</Text>
