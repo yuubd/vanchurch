@@ -11,7 +11,7 @@ import { formatPhoneInput } from '../../lib/phone';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Cell = { id: string; name: string };
-type Member = { id: string; name: string; roles: string[]; cell_id: string | null; cells: { name: string } | null };
+type Member = { id: string; name: string; date_of_birth: string | null; roles: string[]; cell_id: string | null; cells: { name: string } | null };
 type JoinRequest = { id: string; user_id: string; created_at: string; users: { name: string; phone?: string } | null };
 type PendingInvite = { id: string; name: string; phone: string; created_at: string };
 
@@ -81,8 +81,11 @@ export default function MembersScreen() {
     setMyRoles((myProfile as any)?.roles ?? []);
     setMyChurchId(churchId);
 
+    // date_of_birth isn't selectable off the users table directly (locked down so any
+    // church member couldn't pull everyone else's) — this RPC is scoped to admins/pastors
+    // of their own church only.
     const queries: Promise<any>[] = [
-      supabase.from('users').select('id, name, roles, cell_id, cells!users_cell_id_fkey(name)').eq('church_id', churchId ?? ''),
+      supabase.rpc('get_church_roster_with_dob'),
       supabase.from('cells').select('id, name').order('name'),
     ];
     if (churchId) {
@@ -102,7 +105,10 @@ export default function MembersScreen() {
     }
 
     const [{ data: memberData }, { data: cellData }, joinRes, inviteRes] = await Promise.all(queries);
-    setMembers((memberData ?? []) as any);
+    setMembers((memberData ?? []).map((m: any) => ({
+      id: m.id, name: m.name, date_of_birth: m.date_of_birth, roles: m.roles, cell_id: m.cell_id,
+      cells: m.cell_name ? { name: m.cell_name } : null,
+    })));
     setCells(cellData ?? []);
     setJoinRequests((joinRes?.data ?? []) as any);
     setPendingInvites((inviteRes?.data ?? []) as any);
@@ -277,6 +283,7 @@ export default function MembersScreen() {
                   <Text key={r} style={[styles.roleBadge, ROLE_STYLE[r]]}>{r}</Text>
                 ))}
                 <Text style={styles.metaCell}> · {item.cells?.name ?? t('noCell')}</Text>
+                {!!item.date_of_birth && <Text style={styles.metaCell}> · {item.date_of_birth}</Text>}
               </View>
             </View>
             <Text style={styles.editLabel}>{t('edit')}</Text>
