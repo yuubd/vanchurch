@@ -6,7 +6,8 @@ import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
-import { isValidDate } from '../../lib/dob';
+import { isValidDate, formatDobInput } from '../../lib/dob';
+import { formatPhoneInput } from '../../lib/phone';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Leader = { id: string; name: string };
@@ -283,7 +284,7 @@ export default function CellsScreen() {
                 placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
                 value={newMemberPhone}
-                onChangeText={setNewMemberPhone}
+                onChangeText={v => setNewMemberPhone(formatPhoneInput(v))}
               />
               <Text style={styles.label}>{t('dateOfBirth')}</Text>
               <TextInput
@@ -292,7 +293,7 @@ export default function CellsScreen() {
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numbers-and-punctuation"
                 value={newMemberDob}
-                onChangeText={setNewMemberDob}
+                onChangeText={v => setNewMemberDob(formatDobInput(v))}
               />
               {!!newMemberDob && !isValidDate(newMemberDob) && <Text style={styles.addMemberError}>{t('dateOfBirthInvalid')}</Text>}
               {!!addMemberError && <Text style={styles.addMemberError}>{addMemberError}</Text>}

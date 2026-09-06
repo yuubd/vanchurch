@@ -6,7 +6,7 @@ import { useDelayedMount } from '../../lib/useDelayedMount';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { useTranslation } from '../../lib/i18n';
-import { isValidDate } from '../../lib/dob';
+import { isValidDate, formatDobInput } from '../../lib/dob';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
@@ -77,7 +77,7 @@ export default function ProfileSetup() {
           placeholder={t('dateOfBirthPlaceholder')}
           placeholderTextColor="#9CA3AF"
           value={dob}
-          onChangeText={setDob}
+          onChangeText={v => setDob(formatDobInput(v))}
           keyboardType="numbers-and-punctuation"
           returnKeyType="done"
           onSubmitEditing={save}

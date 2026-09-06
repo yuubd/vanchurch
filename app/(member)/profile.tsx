@@ -6,7 +6,7 @@ import { useTranslation, Lang } from '../../lib/i18n';
 import { isBiometricAvailable, isBiometricEnabled, setBiometricEnabled, storeSession, clearBiometrics, promptBiometric } from '../../lib/biometrics';
 import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
-import { isValidDate } from '../../lib/dob';
+import { isValidDate, formatDobInput } from '../../lib/dob';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Profile = { name: string; date_of_birth: string | null; roles: string[]; cells: { name: string } | null; churches: { name: string } | null; phone: string | null };
@@ -55,13 +55,20 @@ export default function ProfileScreen() {
   }, []);
 
   async function loadProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data } = await supabase
-      .from('users')
-      .select('name, date_of_birth, roles, cells!users_cell_id_fkey(name), churches(name)')
-      .eq('id', user!.id)
-      .single();
-    setProfile({ ...(data as any), phone: user?.phone ?? null });
+    // phone/date_of_birth aren't selectable straight off the users table anymore (RLS only
+    // gates rows, not columns — any church member could otherwise pull everyone else's via
+    // a raw REST call), so the caller's own copy comes through this SECURITY DEFINER RPC.
+    const { data } = await supabase.rpc('get_my_profile');
+    const row = (data ?? [])[0];
+    if (!row) return;
+    setProfile({
+      name: row.name,
+      date_of_birth: row.date_of_birth,
+      roles: row.roles,
+      phone: row.phone,
+      cells: row.cell_name ? { name: row.cell_name } : null,
+      churches: row.church_name ? { name: row.church_name } : null,
+    });
   }
 
   function startEditProfile() {
@@ -143,7 +150,7 @@ export default function ProfileScreen() {
               <>
                 <TextInput style={styles.editInput} value={editName} onChangeText={setEditName} placeholder={t('namePlaceholder')} placeholderTextColor="#9CA3AF" />
                 <Text style={[styles.label, styles.editSecondLabel]}>{t('dateOfBirth')}</Text>
-                <TextInput style={styles.editInput} value={editDob} onChangeText={setEditDob} placeholder={t('dateOfBirthPlaceholder')} placeholderTextColor="#9CA3AF" keyboardType="numbers-and-punctuation" />
+                <TextInput style={styles.editInput} value={editDob} onChangeText={v => setEditDob(formatDobInput(v))} placeholder={t('dateOfBirthPlaceholder')} placeholderTextColor="#9CA3AF" keyboardType="numbers-and-punctuation" />
                 {!!editDob && !isValidDate(editDob) && <Text style={styles.editError}>{t('dateOfBirthInvalid')}</Text>}
                 <View style={styles.editBtnRow}>
                   <TouchableOpacity style={styles.editCancelBtn} onPress={() => setEditingProfile(false)}>
