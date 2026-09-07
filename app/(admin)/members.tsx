@@ -12,7 +12,7 @@ import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
 type Cell = { id: string; name: string };
 type Member = { id: string; name: string; date_of_birth: string | null; roles: string[]; cell_id: string | null; cells: { name: string } | null };
-type JoinRequest = { id: string; user_id: string; created_at: string; users: { name: string; phone?: string } | null };
+type JoinRequest = { id: string; user_id: string; created_at: string; name: string; date_of_birth: string | null };
 type PendingInvite = { id: string; name: string; phone: string; created_at: string };
 
 const ALL_ROLES = ['member', 'cell_leader', 'pastor', 'admin'] as const;
@@ -89,13 +89,7 @@ export default function MembersScreen() {
       supabase.from('cells').select('id, name').order('name'),
     ];
     if (churchId) {
-      queries.push(
-        supabase.from('join_requests')
-          .select('id, user_id, created_at, users!join_requests_user_id_users_fkey(name)')
-          .eq('church_id', churchId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: true })
-      );
+      queries.push(supabase.rpc('get_pending_join_requests'));
       queries.push(
         supabase.from('pending_invites')
           .select('id, name, phone, created_at')
@@ -237,8 +231,11 @@ export default function MembersScreen() {
           {joinRequests.map(req => (
             <View key={req.id} style={styles.pendingRow}>
               <View style={styles.pendingInfo}>
-                <Text style={styles.pendingName}>{req.users?.name ?? '—'}</Text>
-                <Text style={styles.pendingDate}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                <Text style={styles.pendingName}>{req.name ?? '—'}</Text>
+                <Text style={styles.pendingDate}>
+                  {new Date(req.created_at).toLocaleDateString()}
+                  {req.date_of_birth ? ` · ${t('dateOfBirth')}: ${req.date_of_birth}` : ''}
+                </Text>
               </View>
               <View style={styles.pendingBtns}>
                 <TouchableOpacity style={styles.rejectBtn} onPress={() => rejectRequest(req)}>
