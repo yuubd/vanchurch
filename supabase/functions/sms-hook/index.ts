@@ -1,33 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-serve(async (req) => {
-  try {
-    const body = await req.json();
-    const phone: string | undefined = body?.user?.phone;
-    const otp: string | undefined = body?.sms?.otp;
-
-    if (phone && otp) {
-      const url = Deno.env.get("SUPABASE_URL");
-      const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-      // Normalize to E.164 with leading +
-      const normalized = phone.startsWith("+") ? phone : `+${phone}`;
-      await fetch(`${url}/rest/v1/test_otps`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": key!,
-          "Authorization": `Bearer ${key}`,
-          "Prefer": "resolution=merge-duplicates",
-        },
-        body: JSON.stringify({ phone: normalized, otp, created_at: new Date().toISOString() }),
-      });
-    }
-  } catch (_) {
-    // Non-JSON or unexpected payload — still return 200
-  }
-
-  return new Response(JSON.stringify({}), {
-    status: 200,
+// Retired: this dev-era hook wrote unauthenticated request bodies into test_otps using
+// the service-role key (verify_jwt was false). Twilio is the live OTP delivery path and
+// test_otps no longer exists, so this was already dead, but it sat at a public URL
+// accepting untrusted input on trust. Neutralized rather than left callable.
+Deno.serve(async () => {
+  return new Response(JSON.stringify({ error: "retired" }), {
+    status: 410,
     headers: { "Content-Type": "application/json" },
   });
 });
