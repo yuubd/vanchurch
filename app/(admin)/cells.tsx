@@ -100,7 +100,11 @@ export default function CellsScreen() {
     const originallyIn = new Set(members.filter(m => m.cell_id === editing.id).map(m => m.id));
     const toAdd = [...memberIds].filter(id => !originallyIn.has(id));
     const toRemove = [...originallyIn].filter(id => !memberIds.has(id));
-    if (toAdd.length) await supabase.from('users').update({ cell_id: editing.id }).in('id', toAdd);
+    // Assigns cell_id and ensures 'member' is present in roles — a plain bulk .update()
+    // can't conditionally array_append per row, so someone without 'member' already in
+    // their roles (e.g. an admin/pastor added to a cell) would end up with a cell but no
+    // role reflecting it.
+    if (toAdd.length) await supabase.rpc('add_members_to_cell', { member_ids: toAdd, target_cell_id: editing.id });
     if (toRemove.length) await supabase.from('users').update({ cell_id: null }).in('id', toRemove);
 
     setSaving(false);
