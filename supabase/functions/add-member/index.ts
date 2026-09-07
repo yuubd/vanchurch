@@ -76,6 +76,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // The "already in another community" check below is a phone-number existence oracle —
+    // without a limit, an admin/leader account (even a throwaway one) could feed it phone
+    // numbers unboundedly to learn which are registered users. Scoped to the real caller
+    // (not the service-role client below), so it actually throttles per-admin.
+    const { error: rateLimitErr } = await callerClient.rpc("check_rate_limit", {
+      p_action: "add_member",
+      p_max_count: 20,
+      p_window_seconds: 3600,
+    });
+    if (rateLimitErr) {
+      return new Response(JSON.stringify({ error: "Too many requests — please try again later" }), { status: 429, headers: cors });
+    }
+
     const admin = createClient(url, serviceKey);
 
     // Don't create a real account here — that would let anyone enroll a phone number they
