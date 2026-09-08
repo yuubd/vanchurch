@@ -58,7 +58,7 @@ export default function LeaderLayout() {
       }}
     >
       <Tabs.Screen name="index"   options={{ title: t('prayerRequests'), tabBarIcon: ({ focused }) => <TabIcon name="heart"  focused={focused} /> }} />
-      <Tabs.Screen name="members" options={{ title: t('attendance'),     tabBarIcon: ({ focused }) => <TabIcon name="calendar" focused={focused} /> }} />
+      <Tabs.Screen name="members" options={{ title: t('cell'),           tabBarIcon: ({ focused }) => <TabIcon name="grid"     focused={focused} /> }} />
       <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} /> }} />
     </Tabs>

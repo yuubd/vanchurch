@@ -141,7 +141,7 @@ export default function LeaderMembers() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('attendance')}</Text>
+        <Text style={styles.title}>{t('cell')}</Text>
         {cellName ? <Text style={styles.cellBadge}>{cellName}</Text> : null}
         <View style={styles.headerSpacer} />
         <TouchableOpacity style={styles.addBtn} onPress={() => { setAddError(''); setShowAddMember(true); }}>
