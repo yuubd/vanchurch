@@ -97,9 +97,15 @@ export default function CellsScreen() {
 
     // Apply member checklist changes: assign newly-checked members to this
     // cell, unassign previously-assigned members that got unchecked.
+    // A cell's leader must always belong to the cell. Unchecking them in the member list
+    // would otherwise leave cells.leader_id and their cell_leader role pointing at a cell
+    // their own cell_id doesn't match — stranding them on "No cell" and silently cutting
+    // off their Attendance/leader screens, which key off cell_id.
+    const leaderId = editing.leader_id ?? null;
     const originallyIn = new Set(members.filter(m => m.cell_id === editing.id).map(m => m.id));
     const toAdd = [...memberIds].filter(id => !originallyIn.has(id));
-    const toRemove = [...originallyIn].filter(id => !memberIds.has(id));
+    if (leaderId && !originallyIn.has(leaderId) && !toAdd.includes(leaderId)) toAdd.push(leaderId);
+    const toRemove = [...originallyIn].filter(id => !memberIds.has(id) && id !== leaderId);
     // Assigns cell_id and ensures 'member' is present in roles — a plain bulk .update()
     // can't conditionally array_append per row, so someone without 'member' already in
     // their roles (e.g. an admin/pastor added to a cell) would end up with a cell but no
@@ -257,14 +263,18 @@ export default function CellsScreen() {
             .filter(m => !m.cell_id || m.cell_id === editing?.id)
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(m => {
-              const checked = memberIds.has(m.id);
+              // The leader always belongs to their own cell — shown checked and locked,
+              // matching how the sub-leader list above treats them.
+              const isLeader = m.id === editing?.leader_id;
+              const checked = isLeader || memberIds.has(m.id);
               return (
                 <TouchableOpacity
                   key={m.id}
                   style={[styles.subRow, checked && styles.subRowActive]}
-                  onPress={() => toggleMember(m.id)}
+                  onPress={() => !isLeader && toggleMember(m.id)}
+                  disabled={isLeader}
                 >
-                  <Text style={[styles.subLabel, checked && styles.subLabelActive]}>{m.name}</Text>
+                  <Text style={[styles.subLabel, checked && styles.subLabelActive, isLeader && styles.subLabelDisabled]}>{m.name}</Text>
                   <Text style={styles.subCheck}>{checked ? '✓' : ''}</Text>
                 </TouchableOpacity>
               );
