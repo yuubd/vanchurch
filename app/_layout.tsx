@@ -96,13 +96,22 @@ export default function RootLayout() {
       return;
     }
 
+    const roles: string[] = data.roles ?? ['member'];
+
+    // A developer needn't belong to any church — send them to the dashboard rather than
+    // pushing them through onboarding. Developers who *do* have a church land in their
+    // normal role home and reach the dashboard from their profile instead.
+    if (!data.church_id && roles.includes('developer')) {
+      router.replace('/(dev)');
+      return;
+    }
+
     // Incomplete onboarding: needs church
     if (!data.church_id) {
       router.replace('/(auth)/onboarding');
       return;
     }
 
-    const roles: string[] = data.roles ?? ['member'];
     if (roles.includes('admin')) {
       router.replace('/(admin)');
     } else if (roles.includes('pastor')) {

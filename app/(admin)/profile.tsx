@@ -294,6 +294,12 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {profile.roles.includes('developer') && (
+            <TouchableOpacity style={styles.devBtn} onPress={() => router.push('/(dev)')}>
+              <Text style={styles.devBtnText}>{t('devDashboard')} ›</Text>
+            </TouchableOpacity>
+          )}
+
           {profile.roles.includes('pastor') && (
             <TouchableOpacity style={styles.destroyBtn} onPress={confirmDestroy} disabled={destroying}>
               <Text style={styles.destroyText}>{destroying ? '...' : t('destroyCommunity')}</Text>
@@ -345,6 +351,8 @@ const styles = StyleSheet.create({
   shareBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   destroyBtn: { marginTop: 24, borderWidth: 1, borderColor: '#DC2626', borderRadius: 12, padding: 14, alignItems: 'center' },
   destroyText: { color: '#DC2626', fontSize: 14, fontWeight: '600' },
+  devBtn: { marginTop: 8, backgroundColor: '#EEF2FF', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#C7D2FE' },
+  devBtnText: { color: '#4338CA', fontSize: 15, fontWeight: '700' },
   logoutBtn: { margin: 20, backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, alignItems: 'center' },
   logoutText: { color: '#dc2626', fontSize: 15, fontWeight: '600' },
 });
