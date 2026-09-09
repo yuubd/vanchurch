@@ -197,6 +197,11 @@ const strings = {
     devCellsShort: '셀',
     devPrayersShort: '기도',
     devPendingShort: '대기',
+    devUsersSection: '사용자',
+    devFilterAll: '전체',
+    devFilterNoChurch: '공동체 미소속',
+    devFilterIncomplete: '프로필 미완성',
+    devNoName: '(이름 없음)',
   },
   en: {
     // Nav
@@ -391,6 +396,11 @@ const strings = {
     devCellsShort: 'Cells',
     devPrayersShort: 'Prayers',
     devPendingShort: 'Pending',
+    devUsersSection: 'Users',
+    devFilterAll: 'All',
+    devFilterNoChurch: 'No community',
+    devFilterIncomplete: 'Incomplete profile',
+    devNoName: '(no name)',
   },
 };
 

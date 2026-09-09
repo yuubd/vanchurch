@@ -36,6 +36,26 @@ type Feedback = {
   church_name: string | null;
 };
 
+type DevUser = {
+  id: string;
+  name: string;
+  phone: string | null;
+  roles: string[];
+  church_name: string | null;
+  cell_name: string | null;
+  created_at: string;
+};
+
+type UserFilter = 'all' | 'no_church' | 'incomplete';
+
+function formatPhone(raw: string | null): string {
+  if (!raw) return '—';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1'))
+    return `+1 ${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  return raw;
+}
+
 function relativeDays(iso: string | null): string {
   if (!iso) return '—';
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -48,28 +68,32 @@ export default function DevDashboard() {
   const [totals, setTotals] = useState<Totals | null>(null);
   const [churches, setChurches] = useState<Church[]>([]);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [users, setUsers] = useState<DevUser[]>([]);
+  const [userFilter, setUserFilter] = useState<UserFilter>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const { t, lang } = useTranslation();
 
-  useFocusEffect(useCallback(() => { loadData(); }, []));
+  useFocusEffect(useCallback(() => { loadData(userFilter); }, [userFilter]));
 
-  async function loadData() {
-    const [totalsRes, churchesRes, feedbackRes] = await Promise.all([
+  async function loadData(filter: UserFilter) {
+    const [totalsRes, churchesRes, feedbackRes, usersRes] = await Promise.all([
       supabase.rpc('dev_totals'),
       supabase.rpc('dev_churches'),
       supabase.rpc('dev_feedback'),
+      supabase.rpc('dev_users', { p_filter: filter }),
     ]);
     setTotals((totalsRes.data ?? [])[0] ?? null);
     setChurches(churchesRes.data ?? []);
     setFeedback(feedbackRes.data ?? []);
+    setUsers(usersRes.data ?? []);
     setLoading(false);
   }
 
   async function onRefresh() {
     setRefreshing(true);
-    await loadData();
+    await loadData(userFilter);
     setRefreshing(false);
   }
 
@@ -141,6 +165,37 @@ export default function DevDashboard() {
         </View>
       ))}
 
+      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>{t('devUsersSection')} ({users.length})</Text>
+      <View style={styles.filterRow}>
+        {(['all', 'no_church', 'incomplete'] as UserFilter[]).map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterChip, userFilter === f && styles.filterChipActive]}
+            onPress={() => setUserFilter(f)}
+          >
+            <Text style={[styles.filterText, userFilter === f && styles.filterTextActive]}>
+              {f === 'all' ? t('devFilterAll') : f === 'no_church' ? t('devFilterNoChurch') : t('devFilterIncomplete')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {users.map(u => (
+        <View key={u.id} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{u.name?.trim() ? u.name : t('devNoName')}</Text>
+            {u.roles?.filter(r => r !== 'member').map(r => (
+              <Text key={r} style={styles.roleBadge}>{r}</Text>
+            ))}
+          </View>
+          <Text style={styles.cardMeta}>{formatPhone(u.phone)}</Text>
+          <Text style={styles.cardSub}>
+            {u.church_name ?? t('devNoChurch')}{u.cell_name ? ` · ${u.cell_name}` : ''}
+            {' · '}{new Date(u.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
+          </Text>
+        </View>
+      ))}
+
       <Text style={[styles.sectionLabel, { marginTop: 24 }]}>{t('devFeedback')}</Text>
       {feedback.length === 0 ? (
         <Text style={styles.empty}>{t('noFeedback')}</Text>
@@ -182,5 +237,11 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 13, color: '#374151' },
   cardSub: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
   feedbackBody: { fontSize: 14, color: '#111827', lineHeight: 20 },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
+  filterChipActive: { backgroundColor: '#1D3FAA', borderColor: '#1D3FAA' },
+  filterText: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
+  filterTextActive: { color: '#fff' },
+  roleBadge: { fontSize: 10, color: '#4338CA', backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20, overflow: 'hidden', fontWeight: '700' },
   empty: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
 });
