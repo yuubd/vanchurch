@@ -83,6 +83,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="attendance" options={{ title: t('attendance'), tabBarIcon: ({ focused }) => <TabIcon name="checkmark-circle" focused={focused} />, href: isPastor && hasCell ? undefined : null }} />
       <Tabs.Screen name="cells"   options={{ title: t('cells'),          tabBarIcon: ({ focused }) => <TabIcon name="grid"    focused={focused} /> }} />
       <Tabs.Screen name="feedback" options={{ href: null }} />
+      <Tabs.Screen name="cell/[id]" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('profile'),        tabBarIcon: ({ focused }) => <TabIcon name="person"  focused={focused} /> }} />
       <Tabs.Screen name="setup"   options={{ href: null }} />
     </Tabs>

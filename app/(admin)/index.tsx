@@ -150,10 +150,14 @@ export default function AdminHome() {
               </TouchableOpacity>
             </View>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}>
+          <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: '#F0FDF4' }]}
+            onPress={() => router.push('/(admin)/cells')}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.statNum, { color: '#16A34A' }]}>{stats.cells}</Text>
             <Text style={styles.statLabel}>{t('cells')}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionLabel}>{t('quickMenu')}</Text>

@@ -204,6 +204,7 @@ const strings = {
     devNoName: '(이름 없음)',
     pastorOnly: '목사님만 보기',
     pastorOnlyDesc: '셀 리더와 셀 멤버에게는 보이지 않아요',
+    cellMemberCountSuffix: '명',
   },
   en: {
     // Nav
@@ -405,6 +406,7 @@ const strings = {
     devNoName: '(no name)',
     pastorOnly: 'Pastor only',
     pastorOnlyDesc: "Your cell leader and cell members won't see this",
+    cellMemberCountSuffix: ' members',
   },
 };
 

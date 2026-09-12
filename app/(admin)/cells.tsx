@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, RefreshControl } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import { useTranslation } from '../../lib/i18n';
@@ -34,8 +34,29 @@ export default function CellsScreen() {
   const [addMemberError, setAddMemberError] = useState('');
   const memberNameRef = useRef<TextInput>(null);
   const { t } = useTranslation();
+  const router = useRouter();
+  const { edit: editParam } = useLocalSearchParams<{ edit?: string }>();
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
+
+  // Arriving from the cell detail screen's Edit button: open that cell's editor straight
+  // away. Waits for cells/members to load so the member checklist is seeded correctly.
+  useEffect(() => {
+    if (!editParam || !cells.length) return;
+    const target = cells.find(c => c.id === editParam);
+    if (!target) return;
+    openEditor(target);
+    router.setParams({ edit: undefined });
+  }, [editParam, cells, members]);
+
+  function openEditor(item: Cell) {
+    setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] });
+    setMemberIds(new Set(members.filter(m => m.cell_id === item.id).map(m => m.id)));
+    setShowAddMember(false);
+    setNewMemberName('');
+    setNewMemberPhone('');
+    setAddMemberError('');
+  }
 
   async function onRefresh() {
     setRefreshing(true);
@@ -198,14 +219,7 @@ export default function CellsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.rowContent} onPress={() => {
-              setEditing({ ...item, sub_leader_ids: item.sub_leader_ids ?? [] });
-              setMemberIds(new Set(members.filter(m => m.cell_id === item.id).map(m => m.id)));
-              setShowAddMember(false);
-              setNewMemberName('');
-              setNewMemberPhone('');
-              setAddMemberError('');
-            }}>
+            <TouchableOpacity style={styles.rowContent} onPress={() => router.push(`/(admin)/cell/${item.id}`)}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{t('cellLeader')}: {item.leader?.name ?? t('none')}</Text>
               {!!subLeaderNames(item) && (
