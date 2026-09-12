@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,7 +48,14 @@ export default function RootLayout() {
     const inAuth = segs[0] === '(auth)';
     const inJoin = segs[0] === 'join';
     const onLoginScreen = inAuth && segs[1] === 'login';
-    const initialLanding = segs.length === 0; // cold launch, before any route has settled
+    // Cold launch, before any route has settled. On web, a hard load at an explicit path
+    // (e.g. /dev) also reports zero segments for a tick before the router resolves the
+    // URL — which made this fire and bounce a deliberate deep link to the role home. Only
+    // count it as initial landing when the browser is genuinely at the root.
+    const atWebRoot = Platform.OS !== 'web'
+      || typeof window === 'undefined'
+      || window.location.pathname === '/';
+    const initialLanding = segs.length === 0 && atWebRoot;
     // Only redirect-by-role on cold launch, the login screen, or a join deep-link.
     // Other (auth) screens (onboarding, create-community, find-community,
     // profile-setup, pending) are deliberate steps the user is mid-way through and
