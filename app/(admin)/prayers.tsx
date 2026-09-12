@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Switch, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from '../../lib/i18n';
@@ -36,8 +36,6 @@ export default function PrayersScreen() {
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [myId, setMyId] = useState('');
   const [churchId, setChurchId] = useState('');
-  const [sharingEnabled, setSharingEnabled] = useState(false);
-  const [togglingSharing, setTogglingSharing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -67,18 +65,9 @@ export default function PrayersScreen() {
     const { data } = await supabase.from('users').select('church_id').eq('id', user.id).single();
     if (data?.church_id) {
       setChurchId(data.church_id);
-      const { data: church } = await supabase.from('churches').select('cell_prayer_sharing').eq('id', data.church_id).single();
-      setSharingEnabled(church?.cell_prayer_sharing ?? false);
     }
   }
 
-  async function toggleSharing(value: boolean) {
-    setTogglingSharing(true);
-    const { error } = await supabase.from('churches').update({ cell_prayer_sharing: value }).eq('id', churchId);
-    setTogglingSharing(false);
-    if (error) { showAlert('오류', friendlyError(error)); return; }
-    setSharingEnabled(value);
-  }
 
   async function loadRequests(userId: string) {
     const { start, end } = getWeekRange(weekOffset, lang);
@@ -129,20 +118,6 @@ export default function PrayersScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('prayerRequests')}</Text>
-      </View>
-
-      <View style={styles.sharingRow}>
-        <View style={styles.sharingText}>
-          <Text style={styles.sharingLabel}>{t('cellPrayerSharing')}</Text>
-          <Text style={styles.sharingDesc}>{t('cellPrayerSharingDesc')}</Text>
-        </View>
-        <Switch
-          value={sharingEnabled}
-          onValueChange={toggleSharing}
-          disabled={togglingSharing || !churchId}
-          trackColor={{ false: '#E5E7EB', true: '#BFDBFE' }}
-          thumbColor={sharingEnabled ? '#2563EB' : '#9CA3AF'}
-        />
       </View>
 
       <View style={styles.dateNav}>

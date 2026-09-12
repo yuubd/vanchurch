@@ -6,7 +6,7 @@ import { friendlyError } from '../../lib/friendlyError';
 import { showAlert } from '../../lib/alert';
 import { useWebPullToRefresh } from '../../lib/useWebPullToRefresh';
 
-type Prayer = { id: string; body: string; created_at: string; prayCount: number; prayedByMe: boolean; authorName?: string; isMine: boolean };
+type Prayer = { id: string; body: string; created_at: string; prayCount: number; prayedByMe: boolean; authorName?: string; isMine: boolean; pastor_only?: boolean };
 
 export default function MemberHome() {
   const { t, lang } = useTranslation();
@@ -15,7 +15,7 @@ export default function MemberHome() {
   const [churchCell, setChurchCell] = useState('');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [cellPrayers, setCellPrayers] = useState<Prayer[]>([]);
-  const [sharingEnabled, setSharingEnabled] = useState(false);
+  const [pastorOnly, setPastorOnly] = useState(false);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState('');
@@ -39,7 +39,7 @@ export default function MemberHome() {
 
     const { data } = await supabase
       .from('users')
-      .select('name, cell_id, church_id, cells!users_cell_id_fkey(name), churches!users_church_id_fkey(name, cell_prayer_sharing)')
+      .select('name, cell_id, church_id, cells!users_cell_id_fkey(name), churches!users_church_id_fkey(name)')
       .eq('id', user.id)
       .single();
 
@@ -48,12 +48,10 @@ export default function MemberHome() {
     const cell = (data as any)?.cells?.name ?? '';
     setChurchCell([church, cell].filter(Boolean).join(' · '));
 
-    const sharing = (data as any)?.churches?.cell_prayer_sharing ?? false;
-    setSharingEnabled(sharing);
 
     // My own prayer requests
     const { data: myPrayerData } = await supabase.from('prayer_requests')
-      .select('id, body, created_at')
+      .select('id, body, created_at, pastor_only')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -73,8 +71,9 @@ export default function MemberHome() {
       isMine: true,
     })));
 
-    // Cell prayer requests when sharing is enabled
-    if (sharing && (data as any)?.cell_id) {
+    // Cell prayer requests — shared by default now; pastor-only ones are filtered out
+    // server-side by RLS, so whatever comes back here is safe to show.
+    if ((data as any)?.cell_id) {
       const { data: cellMembers } = await supabase.from('users').select('id, name').eq('cell_id', (data as any).cell_id);
       const memberIds = (cellMembers ?? []).map((m: any) => m.id).filter((id: string) => id !== user.id);
       const memberMap: Record<string, string> = {};
@@ -132,10 +131,11 @@ export default function MemberHome() {
     if (!draft.trim()) return;
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('prayer_requests').insert({ user_id: user?.id, body: draft.trim() });
+    const { error } = await supabase.from('prayer_requests').insert({ user_id: user?.id, body: draft.trim(), pastor_only: pastorOnly });
     setLoading(false);
     if (error) { showAlert('오류', friendlyError(error)); return; }
     setDraft('');
+    setPastorOnly(false);
     loadData();
   }
 
@@ -199,6 +199,20 @@ export default function MemberHome() {
                 textAlignVertical="top"
                 maxLength={500}
               />
+              <TouchableOpacity
+                style={[styles.pastorOnlyRow, pastorOnly && styles.pastorOnlyRowActive]}
+                onPress={() => setPastorOnly(v => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, pastorOnly && styles.checkboxActive]}>
+                  {pastorOnly && <Text style={styles.checkboxMark}>✓</Text>}
+                </View>
+                <View style={styles.pastorOnlyText}>
+                  <Text style={[styles.pastorOnlyLabel, pastorOnly && styles.pastorOnlyLabelActive]}>{t('pastorOnly')}</Text>
+                  <Text style={styles.pastorOnlyDesc}>{t('pastorOnlyDesc')}</Text>
+                </View>
+              </TouchableOpacity>
+
               <View style={styles.composeFooter}>
                 <Text style={styles.charCount}>{draft.length} / 500</Text>
                 <TouchableOpacity
@@ -211,7 +225,7 @@ export default function MemberHome() {
               </View>
             </View>
 
-            {sharingEnabled && cellPrayers.length > 0 && (
+            {cellPrayers.length > 0 && (
               <View>
                 <Text style={styles.sectionLabel}>{t('cellPrayersSection')}</Text>
                 {cellPrayers.map(item => (
@@ -266,6 +280,7 @@ export default function MemberHome() {
                 ) : (
                   <View>
                     <Text style={styles.body}>{item.body}</Text>
+                    {item.pastor_only && <Text style={styles.pastorOnlyBadge}>🔒 {t('pastorOnly')}</Text>}
                     <View style={styles.cardFooter}>
                       <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</Text>
                       <View style={styles.myPrayerActions}>
@@ -300,6 +315,16 @@ const styles = StyleSheet.create({
   compose: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 16, padding: 16, backgroundColor: '#F9FAFB', marginBottom: 32 },
   input: { fontSize: 16, color: '#111827', lineHeight: 24, minHeight: 100, textAlignVertical: 'top' },
   composeFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+  pastorOnlyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
+  pastorOnlyRowActive: { borderColor: '#BFDBFE', backgroundColor: '#EFF6FF' },
+  checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  checkboxMark: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  pastorOnlyText: { flex: 1 },
+  pastorOnlyLabel: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  pastorOnlyLabelActive: { color: '#1D4ED8' },
+  pastorOnlyDesc: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
+  pastorOnlyBadge: { fontSize: 11, color: '#1D4ED8', fontWeight: '700', marginBottom: 6 },
   charCount: { fontSize: 12, color: '#9CA3AF' },
   submitBtn: { backgroundColor: '#2563EB', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
   submitDisabled: { opacity: 0.4 },
