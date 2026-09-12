@@ -102,7 +102,7 @@ export default function RootLayout() {
     // pushing them through onboarding. Developers who *do* have a church land in their
     // normal role home and reach the dashboard from their profile instead.
     if (!data.church_id && roles.includes('developer')) {
-      router.replace('/(dev)');
+      router.replace('/dev');
       return;
     }
 

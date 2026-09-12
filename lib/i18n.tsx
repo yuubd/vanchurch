@@ -98,7 +98,7 @@ const strings = {
     copyLink: '링크 복사',
     copied: '복사됨 ✓',
     prayerFor: '기도제목 대상',
-    addMember: '멤버 추가',
+    addMember: '새 멤버 추가',
     addMemberHint: '이 번호로 로그인하면 공동체 가입이 자동으로 완료됩니다',
     // Feedback
     feedback: '피드백',
@@ -297,7 +297,7 @@ const strings = {
     copyLink: 'Copy link',
     copied: 'Copied ✓',
     prayerFor: 'Prayer for',
-    addMember: 'Add member',
+    addMember: 'Add new member',
     addMemberHint: 'When they log in with this number, they\'ll be added to your community automatically',
     // Feedback
     feedback: 'Feedback',

@@ -295,7 +295,7 @@ export default function ProfileScreen() {
           </View>
 
           {profile.roles.includes('developer') && (
-            <TouchableOpacity style={styles.devBtn} onPress={() => router.push('/(dev)')}>
+            <TouchableOpacity style={styles.devBtn} onPress={() => router.push('/dev')}>
               <Text style={styles.devBtnText}>{t('devDashboard')} ›</Text>
             </TouchableOpacity>
           )}
